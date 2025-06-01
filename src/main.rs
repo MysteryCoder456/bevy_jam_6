@@ -5,6 +5,9 @@
 
 use bevy::{asset::AssetMetaCheck, prelude::*};
 
+#[cfg(feature = "bevy-inspector-egui")]
+use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
+
 fn main() -> AppExit {
     App::new().add_plugins(AppPlugin).run()
 }
@@ -33,6 +36,14 @@ impl Plugin for AppPlugin {
                     ..default()
                 }),
         );
+
+        #[cfg(feature = "bevy-inspector-egui")]
+        app.add_plugins((
+            EguiPlugin {
+                enable_multipass_for_primary_context: true,
+            },
+            WorldInspectorPlugin::new(),
+        ));
 
         app.add_systems(Startup, spawn_camera);
     }

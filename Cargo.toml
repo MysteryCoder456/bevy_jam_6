@@ -17,6 +17,7 @@ tracing = { version = "0.1", features = [
     "max_level_debug",
     "release_max_level_warn",
 ] }
+bevy-inspector-egui = { version = "0.31", optional = true }
 
 # Your web builds will start failing if you add a dependency that pulls in `getrandom` v0.3+.
 # To fix this, you should tell `getrandom` to use the `wasm_js` backend on Wasm.
@@ -40,6 +41,7 @@ dev = [
     "bevy/bevy_ui_debug",
     # Improve error messages coming from Bevy
     "bevy/track_location",
+    "bevy-inspector-egui",
 ]
 dev_native = [
     "dev",
@@ -48,6 +50,7 @@ dev_native = [
     # Enable embedded asset hot reloading for native dev builds.
     "bevy/embedded_watcher",
 ]
+bevy-inspector-egui = ["dep:bevy-inspector-egui"]
 
 
 [package.metadata.bevy_cli.release]
