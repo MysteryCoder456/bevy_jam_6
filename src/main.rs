@@ -3,6 +3,8 @@
 // Disable console on Windows for non-dev builds.
 #![cfg_attr(not(feature = "dev"), windows_subsystem = "windows")]
 
+mod screens;
+
 use bevy::{asset::AssetMetaCheck, prelude::*};
 
 #[cfg(feature = "bevy-inspector-egui")]
@@ -28,7 +30,7 @@ impl Plugin for AppPlugin {
                 })
                 .set(WindowPlugin {
                     primary_window: Window {
-                        title: "Bevy Jam 6".to_string(),
+                        title: "Toilet Paper".to_string(),
                         fit_canvas_to_parent: true,
                         ..default()
                     }
@@ -37,6 +39,7 @@ impl Plugin for AppPlugin {
                 }),
         );
 
+        // Inspector for dev-builds
         #[cfg(feature = "bevy-inspector-egui")]
         app.add_plugins((
             EguiPlugin {
@@ -45,10 +48,13 @@ impl Plugin for AppPlugin {
             WorldInspectorPlugin::new(),
         ));
 
+        // Add game plugins
+        app.add_plugins(screens::plugin);
+
         app.add_systems(Startup, spawn_camera);
     }
 }
 
 fn spawn_camera(mut commands: Commands) {
-    commands.spawn((Name::new("Camera"), Camera2d));
+    commands.spawn((Name::new("Default Camera"), Camera2d));
 }
