@@ -1,3 +1,4 @@
+use avian2d::prelude::*;
 use bevy::{color::palettes::css::*, prelude::*};
 use std::f32::consts::FRAC_PI_2;
 
@@ -29,11 +30,12 @@ pub fn plugin(app: &mut App) {
 }
 
 fn spawn_shelves(mut commands: Commands, mut events: EventReader<SpawnShelf>) {
+    let shelf_size = Vec2::new(300.0, 80.0);
     for event in events.read() {
         commands.spawn((
             Name::new("Shelf"),
             Shelf,
-            Sprite::from_color(SLATE_GRAY, Vec2::new(300.0, 80.0)),
+            Sprite::from_color(SLATE_GRAY, shelf_size),
             Transform {
                 translation: event.position.extend(0.0),
                 rotation: Quat::from_rotation_z(match event.orientation {
@@ -42,6 +44,8 @@ fn spawn_shelves(mut commands: Commands, mut events: EventReader<SpawnShelf>) {
                 }),
                 ..Default::default()
             },
+            RigidBody::Static,
+            Collider::rectangle(shelf_size.x, shelf_size.y),
         ));
     }
 }

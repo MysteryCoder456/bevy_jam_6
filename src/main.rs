@@ -5,6 +5,7 @@
 
 mod screens;
 
+use avian2d::prelude::*;
 use bevy::{asset::AssetMetaCheck, prelude::*};
 use bevy_enhanced_input::prelude::*;
 
@@ -39,6 +40,7 @@ impl Plugin for AppPlugin {
                     ..default()
                 }),
             EnhancedInputPlugin,
+            PhysicsPlugins::default(),
         ));
 
         // Inspector plugins for dev-builds
@@ -52,6 +54,9 @@ impl Plugin for AppPlugin {
 
         // Add game plugins
         app.add_plugins(screens::plugin);
+
+        // Disable gravity
+        app.insert_resource(Gravity(Vec2::ZERO));
 
         app.add_systems(Startup, spawn_camera);
     }

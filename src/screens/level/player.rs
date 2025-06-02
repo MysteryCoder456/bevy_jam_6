@@ -1,7 +1,5 @@
-use crate::screens::{
-    Screen,
-    level::{Velocity, VelocityDamping},
-};
+use crate::screens::Screen;
+use avian2d::prelude::*;
 use bevy::{color::palettes::css::*, prelude::*};
 use bevy_enhanced_input::{prelude::*, preset::Bidirectional};
 
@@ -58,19 +56,17 @@ fn spawn_player(mut commands: Commands) {
             GamepadAxis::LeftStickX.with_modifiers(Negate::all()),
         ))
         .with_modifiers(DeadZone::default());
-    // .with_conditions(Press::default())
-    // .with_conditions(Release::default());
 
     // Spawn player
+    let player_size = Vec2::new(50.0, 25.0);
     commands.spawn((
         Name::new("Player"),
         Player,
-        Sprite::from_color(LIMEGREEN, Vec2::new(50., 25.)),
-        Velocity::default(),
-        VelocityDamping {
-            linear: 1.2,
-            angular: 2.0,
-        },
+        Sprite::from_color(LIMEGREEN, player_size),
+        RigidBody::Dynamic,
+        Collider::rectangle(player_size.x, player_size.y),
+        LinearDamping(1.2),
+        AngularDamping(2.0),
         actions,
     ));
 }
@@ -81,18 +77,21 @@ fn despawn_player(mut commands: Commands, player_query: Single<Entity, With<Play
 
 fn player_acceleration(
     trigger: Trigger<Fired<Accelerate>>,
-    mut query: Query<(&Transform, &mut Velocity), With<Player>>,
+    mut query: Query<(&Transform, &mut LinearVelocity), With<Player>>,
 ) {
-    if let Ok((transform, mut velocity)) = query.get_mut(trigger.target()) {
+    if let Ok((transform, mut linear_velocity)) = query.get_mut(trigger.target()) {
         let angle = transform.rotation.to_euler(EulerRot::XYZ).2;
         let acceleration_mag = LINEAR_ACCELERATION * trigger.value;
         let acceleration = acceleration_mag * Vec2::from_angle(angle);
-        velocity.linear += acceleration;
+        linear_velocity.0 += acceleration;
     }
 }
 
-fn player_steering(trigger: Trigger<Fired<Steer>>, mut query: Query<&mut Velocity, With<Player>>) {
-    if let Ok(mut velocity) = query.get_mut(trigger.target()) {
-        velocity.angular += trigger.value * STEER_ACCELERATION;
+fn player_steering(
+    trigger: Trigger<Fired<Steer>>,
+    mut query: Query<&mut AngularVelocity, With<Player>>,
+) {
+    if let Ok(mut angular_velocity) = query.get_mut(trigger.target()) {
+        angular_velocity.0 += trigger.value * STEER_ACCELERATION;
     }
 }
