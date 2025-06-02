@@ -6,6 +6,7 @@
 mod screens;
 
 use bevy::{asset::AssetMetaCheck, prelude::*};
+use bevy_enhanced_input::prelude::*;
 
 #[cfg(feature = "bevy-inspector-egui")]
 use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
@@ -18,8 +19,8 @@ pub struct AppPlugin;
 
 impl Plugin for AppPlugin {
     fn build(&self, app: &mut App) {
-        // Add Bevy plugins.
-        app.add_plugins(
+        // Add Bevy plugins
+        app.add_plugins((
             DefaultPlugins
                 .set(AssetPlugin {
                     // Wasm builds will check for meta files (that don't exist) if this isn't set.
@@ -37,9 +38,10 @@ impl Plugin for AppPlugin {
                     .into(),
                     ..default()
                 }),
-        );
+            EnhancedInputPlugin,
+        ));
 
-        // Inspector for dev-builds
+        // Inspector plugins for dev-builds
         #[cfg(feature = "bevy-inspector-egui")]
         app.add_plugins((
             EguiPlugin {

@@ -1,4 +1,4 @@
-use super::Screen;
+use crate::screens::Screen;
 use bevy::prelude::*;
 
 pub fn plugin(app: &mut App) {
