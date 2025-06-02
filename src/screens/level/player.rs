@@ -68,8 +68,8 @@ fn spawn_player(mut commands: Commands) {
         Sprite::from_color(LIMEGREEN, Vec2::new(50., 25.)),
         Velocity::default(),
         VelocityDamping {
-            linear: 0.5,
-            angular: 0.7,
+            linear: 1.2,
+            angular: 2.0,
         },
         actions,
     ));
