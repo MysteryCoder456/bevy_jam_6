@@ -9,7 +9,6 @@ enum Screen {
     MainMenu,
     #[default]
     Level,
-    PauseMenu,
 }
 
 pub fn plugin(app: &mut App) {
