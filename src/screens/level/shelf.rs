@@ -30,11 +30,12 @@ pub fn plugin(app: &mut App) {
     // Register events
     app.add_event::<SpawnShelf>();
 
-    // Spawn systems
+    // (De)spawn systems
     app.add_systems(
         Update,
         (spawn_shelves.run_if(on_event::<SpawnShelf>),).run_if(in_state(Screen::Level)),
     );
+    app.add_systems(OnExit(Screen::Level), despawn_shelves);
 }
 
 fn spawn_shelves(mut commands: Commands, mut events: EventReader<SpawnShelf>) {
@@ -91,6 +92,12 @@ fn spawn_shelves(mut commands: Commands, mut events: EventReader<SpawnShelf>) {
                     .observe(player_approached_shelf)
                     .observe(player_departed_shelf);
             });
+    }
+}
+
+fn despawn_shelves(mut commands: Commands, shelf_query: Query<Entity, With<Shelf>>) {
+    for shelf_entity in shelf_query {
+        commands.entity(shelf_entity).despawn();
     }
 }
 
