@@ -1,4 +1,7 @@
-use crate::screens::Screen;
+use crate::screens::{
+    Screen,
+    level::{GameLayer, Inventory},
+};
 use avian2d::prelude::*;
 use bevy::{color::palettes::css::*, prelude::*};
 use bevy_enhanced_input::{prelude::*, preset::Bidirectional};
@@ -17,11 +20,15 @@ struct Accelerate;
 #[input_action(output = f32)]
 struct Steer;
 
-#[derive(Component)]
-struct Player;
+#[derive(Component, Reflect)]
+#[reflect(Component)]
+pub struct Player {
+    pub current_shelf: Option<Entity>,
+}
 
 pub fn plugin(app: &mut App) {
-    // Register input contexts
+    // Register necessary types
+    app.register_type::<Player>();
     app.add_input_context::<PlayerInputContext>();
 
     // Screen enter and exit systems
@@ -61,10 +68,14 @@ fn spawn_player(mut commands: Commands) {
     let player_size = Vec2::new(50.0, 25.0);
     commands.spawn((
         Name::new("Player"),
-        Player,
+        Player {
+            current_shelf: None,
+        },
+        Inventory::default(),
         Sprite::from_color(LIMEGREEN, player_size),
         RigidBody::Dynamic,
         Collider::rectangle(player_size.x, player_size.y),
+        CollisionLayers::new(GameLayer::Shopper, [GameLayer::Shopper, GameLayer::Shelf]),
         LinearDamping(1.2),
         AngularDamping(2.0),
         actions,
