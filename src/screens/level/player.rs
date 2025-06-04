@@ -1,6 +1,8 @@
+use std::ops::{Add, AddAssign};
+
 use crate::screens::{
     Screen,
-    level::{GameLayer, Inventory},
+    level::{GameLayer, Inventory, shelf::Shelf},
 };
 use avian2d::prelude::*;
 use bevy::{color::palettes::css::*, prelude::*};
@@ -20,6 +22,10 @@ struct Accelerate;
 #[input_action(output = f32)]
 struct Steer;
 
+#[derive(Debug, InputAction)]
+#[input_action(output = bool)]
+struct Interact;
+
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 pub struct Player {
@@ -38,6 +44,7 @@ pub fn plugin(app: &mut App) {
     // Player input reactions
     app.add_observer(player_acceleration);
     app.add_observer(player_steering);
+    app.add_observer(player_interaction);
 }
 
 fn spawn_player(mut commands: Commands) {
@@ -50,6 +57,10 @@ fn spawn_player(mut commands: Commands) {
                 positive: KeyCode::KeyW,
                 negative: KeyCode::KeyS,
             },
+            Bidirectional {
+                positive: KeyCode::ArrowUp,
+                negative: KeyCode::ArrowDown,
+            },
             GamepadAxis::LeftStickY,
         ))
         .with_modifiers(DeadZone::default());
@@ -60,9 +71,16 @@ fn spawn_player(mut commands: Commands) {
                 positive: KeyCode::KeyA,
                 negative: KeyCode::KeyD,
             },
+            Bidirectional {
+                positive: KeyCode::ArrowLeft,
+                negative: KeyCode::ArrowRight,
+            },
             GamepadAxis::LeftStickX.with_modifiers(Negate::all()),
         ))
         .with_modifiers(DeadZone::default());
+    actions
+        .bind::<Interact>()
+        .to((KeyCode::Space, GamepadButton::South));
 
     // Spawn player
     let player_size = Vec2::new(50.0, 25.0);
@@ -104,5 +122,23 @@ fn player_steering(
 ) {
     if let Ok(mut angular_velocity) = query.get_mut(trigger.target()) {
         angular_velocity.0 += trigger.value * STEER_ACCELERATION;
+    }
+}
+
+fn player_interaction(
+    trigger: Trigger<Fired<Interact>>,
+    mut player_query: Query<(&Player, &mut Inventory)>,
+    shelf_query: Query<&Shelf>,
+) {
+    if let Ok((player, mut player_inventory)) = player_query.get_mut(trigger.target()) {
+        if let Some(shelf_entity) = player.current_shelf {
+            if let Ok(shelf) = shelf_query.get(shelf_entity) {
+                if let Some(main_item_quantity) = player_inventory.0.get_mut(&shelf.main_item) {
+                    *main_item_quantity = *main_item_quantity + 1;
+                } else {
+                    player_inventory.0.insert(shelf.main_item, 1);
+                }
+            }
+        }
     }
 }

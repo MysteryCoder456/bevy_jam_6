@@ -19,8 +19,8 @@ pub struct SpawnShelf {
 }
 
 #[derive(Component)]
-struct Shelf {
-    main_item: Item,
+pub struct Shelf {
+    pub main_item: Item,
 }
 
 #[derive(Component)]

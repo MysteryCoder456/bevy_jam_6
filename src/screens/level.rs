@@ -1,11 +1,11 @@
 mod player;
 mod shelf;
 
-use std::fmt::Display;
+use std::{collections::HashMap, fmt::Display};
 
 use crate::screens::Screen;
 use avian2d::prelude::*;
-use bevy::{prelude::*, utils::PreHashMap};
+use bevy::prelude::*;
 use shelf::{ShelfOrientation, SpawnShelf};
 
 #[derive(PhysicsLayer, Default)]
@@ -16,7 +16,7 @@ enum GameLayer {
     Shelf,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Hash, PartialEq, Eq, Reflect)]
 enum Item {
     ToiletPaper,
     CannedTuna,
@@ -36,10 +36,15 @@ impl Display for Item {
     }
 }
 
-#[derive(Component, Default)]
-struct Inventory(PreHashMap<Item, u32>);
+#[derive(Component, Default, Reflect)]
+#[reflect(Component)]
+struct Inventory(HashMap<Item, u32>);
 
 pub fn plugin(app: &mut App) {
+    // Register necessary types
+    app.register_type::<Item>();
+    app.register_type::<Inventory>();
+
     // Add game element plugins
     app.add_plugins((player::plugin, shelf::plugin));
 
