@@ -78,7 +78,8 @@ fn spawn_player(mut commands: Commands) {
         .with_modifiers(DeadZone::default());
     actions
         .bind::<Interact>()
-        .to((KeyCode::Space, GamepadButton::South));
+        .to((KeyCode::Space, GamepadButton::South))
+        .with_conditions(Press::default());
 
     // Spawn player
     let player_size = Vec2::new(50.0, 25.0);
