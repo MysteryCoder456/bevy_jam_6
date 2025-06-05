@@ -11,6 +11,13 @@ use bevy_enhanced_input::prelude::*;
 
 #[cfg(feature = "bevy-inspector-egui")]
 use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
+use screens::Screen;
+
+#[derive(Resource)]
+struct GameAssets {
+    ui_font: Handle<Font>,
+    game_font: Handle<Font>,
+}
 
 fn main() -> AppExit {
     App::new().add_plugins(AppPlugin).run()
@@ -58,10 +65,25 @@ impl Plugin for AppPlugin {
         // Disable gravity
         app.insert_resource(Gravity(Vec2::ZERO));
 
-        app.add_systems(Startup, spawn_camera);
+        app.add_systems(OnEnter(Screen::Loading), load_assets);
+        app.add_systems(Startup, (spawn_camera, load_assets));
     }
 }
 
 fn spawn_camera(mut commands: Commands) {
     commands.spawn((Name::new("Default Camera"), Camera2d));
+}
+
+fn load_assets(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut next_screen: ResMut<NextState<Screen>>,
+) {
+    // Load fonts
+    // NOTE: These may be different later, for now they're the same.
+    let ui_font = asset_server.load("fonts/Pixellari.ttf");
+    let game_font = asset_server.load("fonts/Pixellari.ttf");
+
+    commands.insert_resource(GameAssets { ui_font, game_font });
+    next_screen.set(Screen::Level); // TODO: change to main menu
 }

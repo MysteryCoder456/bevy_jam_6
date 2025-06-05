@@ -1,6 +1,9 @@
-use crate::screens::{
-    Screen,
-    level::{GameLayer, Inventory, shelf::Shelf},
+use crate::{
+    GameAssets,
+    screens::{
+        Screen,
+        level::{GameLayer, Inventory, Item, shelf::Shelf},
+    },
 };
 use avian2d::prelude::*;
 use bevy::{color::palettes::css::*, prelude::*};
@@ -30,14 +33,24 @@ pub struct Player {
     pub current_shelf: Option<Entity>,
 }
 
+#[derive(Component)]
+struct InventoryUI;
+
+#[derive(Component)]
+struct InventoryUIContainer;
+
 pub fn plugin(app: &mut App) {
     // Register necessary types
     app.register_type::<Player>();
     app.add_input_context::<PlayerInputContext>();
 
-    // Screen enter and exit systems
-    app.add_systems(OnEnter(Screen::Level), spawn_player);
-    app.add_systems(OnEnter(Screen::Level), despawn_player);
+    // Player systems
+    app.add_systems(OnEnter(Screen::Level), (spawn_player, spawn_inventory_ui));
+    app.add_systems(
+        OnExit(Screen::Level),
+        (despawn_player, despawn_inventory_ui),
+    );
+    app.add_systems(Update, inventory_changed);
 
     // Player input reactions
     app.add_observer(player_acceleration);
@@ -99,8 +112,96 @@ fn spawn_player(mut commands: Commands) {
     ));
 }
 
-fn despawn_player(mut commands: Commands, player_query: Single<Entity, With<Player>>) {
-    commands.entity(player_query.entity()).despawn();
+fn despawn_player(mut commands: Commands, query: Single<Entity, With<Player>>) {
+    commands.entity(query.entity()).despawn();
+}
+
+fn spawn_inventory_ui(mut commands: Commands, assets: Res<GameAssets>) {
+    commands.spawn((
+        Name::new("Inventory UI"),
+        InventoryUI,
+        BackgroundColor(BLACK.with_alpha(0.6).into()),
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Percent(25.0),
+            right: Val::ZERO,
+            width: Val::Vw(25.0),
+            height: Val::Vh(50.0),
+            display: Display::Flex,
+            flex_direction: FlexDirection::Column,
+            ..Default::default()
+        },
+        children![
+            (
+                Name::new("Inventory UI Title"),
+                Text::new("Inventory"),
+                TextColor(WHITE.into()),
+                TextFont {
+                    font: assets.ui_font.clone(),
+                    font_size: 24.0,
+                    ..Default::default()
+                },
+                TextLayout::new_with_justify(JustifyText::Center),
+                Node {
+                    width: Val::Percent(100.0),
+                    ..Default::default()
+                }
+            ),
+            (
+                InventoryUIContainer,
+                Node {
+                    display: Display::Flex,
+                    flex_direction: FlexDirection::Column,
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    ..Default::default()
+                }
+            )
+        ],
+    ));
+}
+
+fn despawn_inventory_ui(mut commands: Commands, query: Single<Entity, With<InventoryUI>>) {
+    commands.entity(query.entity()).despawn();
+}
+
+fn inventory_item_widget(item: Item, quantity: u32, font: Handle<Font>) -> impl Bundle {
+    (
+        Name::new(format!("Inventory Item ({} x{})", item, quantity)),
+        Text::new(format!("{} x{}", item, quantity)),
+        TextFont {
+            font,
+            font_size: 18.0,
+            ..Default::default()
+        },
+    )
+}
+
+fn inventory_changed(
+    mut commands: Commands,
+    assets: Res<GameAssets>,
+    player_query: Single<&Inventory, (Changed<Inventory>, With<Player>)>,
+    container_query: Single<Entity, With<InventoryUIContainer>>,
+) {
+    // CLear out existing items
+    commands
+        .entity(container_query.entity())
+        .despawn_related::<Children>();
+
+    // Reconstruct UI
+    commands
+        .entity(container_query.entity())
+        .with_children(|parent| {
+            player_query
+                .0
+                .iter()
+                .map(|(item, quantity)| {
+                    inventory_item_widget(*item, *quantity, assets.ui_font.clone())
+                })
+                .for_each(|widget| {
+                    parent.spawn(widget);
+                });
+        });
 }
 
 fn player_acceleration(

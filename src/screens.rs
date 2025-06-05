@@ -3,11 +3,11 @@ mod main_menu;
 
 use bevy::prelude::*;
 
-// TODO: Change default back to MainMenu when game is done
 #[derive(States, Debug, Clone, Eq, PartialEq, Hash, Default)]
-enum Screen {
-    MainMenu,
+pub enum Screen {
     #[default]
+    Loading,
+    MainMenu,
     Level,
 }
 

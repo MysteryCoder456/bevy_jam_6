@@ -1,6 +1,9 @@
-use crate::screens::{
-    Screen,
-    level::{GameLayer, Item, player::Player},
+use crate::{
+    GameAssets,
+    screens::{
+        Screen,
+        level::{GameLayer, Item, player::Player},
+    },
 };
 use avian2d::prelude::*;
 use bevy::{color::palettes::css::*, prelude::*};
@@ -38,7 +41,11 @@ pub fn plugin(app: &mut App) {
     app.add_systems(OnExit(Screen::Level), despawn_shelves);
 }
 
-fn spawn_shelves(mut commands: Commands, mut events: EventReader<SpawnShelf>) {
+fn spawn_shelves(
+    mut commands: Commands,
+    mut events: EventReader<SpawnShelf>,
+    assets: Res<GameAssets>,
+) {
     let shelf_size = Vec2::new(300.0, 80.0);
     let sensor_size = Vec2::new(shelf_size.x, shelf_size.y / 3.0);
 
@@ -62,6 +69,11 @@ fn spawn_shelves(mut commands: Commands, mut events: EventReader<SpawnShelf>) {
                 Collider::rectangle(shelf_size.x, shelf_size.y),
                 CollisionLayers::new(GameLayer::Shelf, [GameLayer::Shopper]),
                 Text2d::new(event.main_item.to_string()),
+                TextFont {
+                    font: assets.game_font.clone(),
+                    font_size: 32.0,
+                    ..Default::default()
+                },
             ))
             .with_children(|parent| {
                 parent
