@@ -50,7 +50,7 @@ pub fn plugin(app: &mut App) {
         OnExit(Screen::Level),
         (despawn_player, despawn_inventory_ui),
     );
-    app.add_systems(Update, inventory_changed);
+    app.add_systems(Update, (inventory_changed, player_shelf_indicator));
 
     // Player input reactions
     app.add_observer(player_acceleration);
@@ -202,6 +202,15 @@ fn inventory_changed(
                     parent.spawn(widget);
                 });
         });
+}
+
+fn player_shelf_indicator(mut query: Single<(&mut Sprite, &Player), Changed<Player>>) {
+    query.0.color = if query.1.current_shelf.is_some() {
+        SKY_BLUE
+    } else {
+        LIMEGREEN
+    }
+    .into();
 }
 
 fn player_acceleration(
