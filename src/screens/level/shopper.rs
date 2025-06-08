@@ -94,18 +94,37 @@ fn shopper_wandering(
         .par_iter_mut()
         .for_each(|(mut transform, mut velocity, shopper_state)| {
             if let ShopperState::Wandering { direction } = *shopper_state {
-                // Make the shopper face the direction its wandering in
                 if direction != Vec2::ZERO {
+                    // Make the shopper face the direction its wandering in
                     transform.rotation = Quat::from_rotation_z(direction.to_angle());
                 }
-
                 velocity.0 = direction * wander_speed;
             }
         });
 }
 
-fn shopper_traveling() {
-    // TODO: implement
+fn shopper_traveling(
+    mut shopper_query: Query<(&mut Transform, &mut LinearVelocity, &ShopperState), With<Shopper>>,
+    shelf_query: Query<&Transform, (With<Shelf>, Without<Shopper>)>,
+) {
+    let travel_speed = 80.0;
+
+    shopper_query.par_iter_mut().for_each(
+        |(mut shopper_transform, mut shopper_velocity, shopper_state)| {
+            if let ShopperState::Traveling { target_shelf } = *shopper_state {
+                if let Ok(shelf_transform) = shelf_query.get(target_shelf) {
+                    // Calculate direction to the target shelf
+                    let direction = (shelf_transform.translation - shopper_transform.translation)
+                        .truncate()
+                        .normalize_or_zero();
+
+                    // Make the shopper face the direction its wandering in
+                    shopper_transform.rotation = Quat::from_rotation_z(direction.to_angle());
+                    shopper_velocity.0 = direction * travel_speed;
+                }
+            }
+        },
+    );
 }
 
 fn shopper_taking() {
@@ -159,6 +178,7 @@ fn shopper_state_machine(
                 }
                 ShopperState::Traveling { target_shelf } => {
                     // Transition to taking from the shelf
+                    // TODO: ONLY if shopper collides with the target shelf
                     shopper.state_timer.set_duration(Duration::from_secs(10));
                     shopper.state_timer.reset();
                     ShopperState::Taking { target_shelf }
