@@ -19,6 +19,9 @@ struct GameAssets {
     game_font: Handle<Font>,
 }
 
+#[derive(Component)]
+struct DefaultCamera;
+
 fn main() -> AppExit {
     App::new().add_plugins(AppPlugin).run()
 }
@@ -71,7 +74,7 @@ impl Plugin for AppPlugin {
 }
 
 fn spawn_camera(mut commands: Commands) {
-    commands.spawn((Name::new("Default Camera"), Camera2d));
+    commands.spawn((Name::new("Default Camera"), DefaultCamera, Camera2d));
 }
 
 fn load_assets(

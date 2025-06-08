@@ -1,5 +1,5 @@
 use crate::{
-    GameAssets,
+    DefaultCamera, GameAssets,
     screens::{
         Screen,
         level::{GameLayer, Inventory, Item, shelf::Shelf},
@@ -27,6 +27,11 @@ struct Steer;
 #[input_action(output = bool)]
 struct Interact;
 
+#[derive(Component)]
+struct PlayerCamera {
+    speed_factor: f32,
+}
+
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 pub struct Player {
@@ -45,17 +50,57 @@ pub fn plugin(app: &mut App) {
     app.add_input_context::<PlayerInputContext>();
 
     // Player systems
-    app.add_systems(OnEnter(Screen::Level), (spawn_player, spawn_inventory_ui));
+    app.add_systems(
+        OnEnter(Screen::Level),
+        (spawn_player_camera, spawn_player, spawn_inventory_ui),
+    );
     app.add_systems(
         OnExit(Screen::Level),
-        (despawn_player, despawn_inventory_ui),
+        (despawn_player_camera, despawn_player, despawn_inventory_ui),
     );
-    app.add_systems(Update, (inventory_changed, player_shelf_indicator));
+    app.add_systems(
+        Update,
+        (camera_follow, inventory_changed, player_shelf_indicator),
+    );
 
     // Player input reactions
     app.add_observer(player_acceleration);
     app.add_observer(player_steering);
     app.add_observer(player_interaction);
+}
+
+fn spawn_player_camera(
+    mut commands: Commands,
+    mut default_camera_query: Single<&mut Camera, With<DefaultCamera>>,
+) {
+    commands.spawn((
+        Name::new("Player Camera"),
+        PlayerCamera { speed_factor: 1.2 },
+        Camera2d,
+        Camera {
+            is_active: true,
+            ..Default::default()
+        },
+        RigidBody::Kinematic,
+    ));
+    default_camera_query.is_active = false;
+}
+
+fn despawn_player_camera(
+    mut commands: Commands,
+    player_camera_query: Single<Entity, With<Camera2d>>,
+    mut default_camera_query: Single<&mut Camera, With<DefaultCamera>>,
+) {
+    commands.entity(player_camera_query.entity()).despawn();
+    default_camera_query.is_active = true;
+}
+
+fn camera_follow(
+    mut camera_query: Single<(&Transform, &PlayerCamera, &mut LinearVelocity)>,
+    player_query: Single<&Transform, With<Player>>,
+) {
+    camera_query.2.0 = (player_query.translation - camera_query.0.translation).truncate()
+        * camera_query.1.speed_factor;
 }
 
 fn spawn_player(mut commands: Commands) {
