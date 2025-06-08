@@ -108,7 +108,7 @@ fn spawn_shelves(
                 parent.spawn((
                     Transform::from_rotation(Quat::from_rotation_z(FRAC_PI_2)),
                     Collider::capsule(shelf_size.y / 2.0, shelf_size.x),
-                    CollisionLayers::new(GameLayer::Shelf, [GameLayer::Player, GameLayer::NPC]),
+                    CollisionLayers::new(GameLayer::Shelf, [GameLayer::NPC]),
                     Friction::new(0.0),
                 ));
             });
