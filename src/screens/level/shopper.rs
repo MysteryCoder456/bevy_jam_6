@@ -22,7 +22,7 @@ pub struct Shopper {
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 enum ShopperState {
-    Wandering,
+    Wandering { direction: Vec2 },
     Traveling { target_shelf: Entity },
     Taking { target_shelf: Entity },
     Panicked,
@@ -42,6 +42,10 @@ pub fn plugin(app: &mut App) {
         (
             spawn_shoppers.run_if(on_event::<SpawnShopper>),
             shopper_state_machine,
+            shopper_wandering.after(shopper_state_machine),
+            shopper_traveling.after(shopper_state_machine),
+            shopper_taking.after(shopper_state_machine),
+            shopper_panicked.after(shopper_state_machine),
         )
             .run_if(in_state(Screen::Level)),
     );
@@ -57,7 +61,9 @@ fn spawn_shoppers(mut commands: Commands, mut events: EventReader<SpawnShopper>)
             Shopper {
                 state_timer: Timer::from_seconds(3.0, TimerMode::Repeating),
             },
-            ShopperState::Wandering,
+            ShopperState::Wandering {
+                direction: Vec2::ZERO,
+            },
             Inventory::default(),
             Sprite::from_color(YELLOW, shopper_size),
             Transform {
@@ -79,6 +85,37 @@ fn despawn_shoppers(mut commands: Commands, query: Query<Entity, With<Shopper>>)
     }
 }
 
+fn shopper_wandering(
+    mut shopper_query: Query<(&mut Transform, &mut LinearVelocity, &ShopperState), With<Shopper>>,
+) {
+    let wander_speed = 50.0;
+
+    shopper_query
+        .par_iter_mut()
+        .for_each(|(mut transform, mut velocity, shopper_state)| {
+            if let ShopperState::Wandering { direction } = *shopper_state {
+                // Make the shopper face the direction its wandering in
+                if direction != Vec2::ZERO {
+                    transform.rotation = Quat::from_rotation_z(direction.to_angle());
+                }
+
+                velocity.0 = direction * wander_speed;
+            }
+        });
+}
+
+fn shopper_traveling() {
+    // TODO: implement
+}
+
+fn shopper_taking() {
+    // TODO: implement
+}
+
+fn shopper_panicked() {
+    // TODO: implement
+}
+
 fn shopper_state_machine(
     time: Res<Time>,
     mut shopper_query: Query<(&Transform, &mut Shopper, &mut ShopperState)>,
@@ -92,7 +129,7 @@ fn shopper_state_machine(
             }
 
             let next_state = match *shopper_state {
-                ShopperState::Wandering => {
+                ShopperState::Wandering { direction: _ } => {
                     // Choose a random shelf to travel to
                     let target_shelf = {
                         // Get the five closest shelves from this shopper
@@ -127,9 +164,18 @@ fn shopper_state_machine(
                     ShopperState::Taking { target_shelf }
                 }
                 ShopperState::Taking { target_shelf: _ } => {
+                    // Chose a random direction to wander off towards
+                    let wander_direction = Vec2::new(
+                        rand::rng().random_range(-1.0..=1.0),
+                        rand::rng().random_range(-1.0..=1.0),
+                    )
+                    .normalize_or_zero();
+
                     shopper.state_timer.set_duration(Duration::from_secs(15));
                     shopper.state_timer.reset();
-                    ShopperState::Wandering
+                    ShopperState::Wandering {
+                        direction: wander_direction,
+                    }
                 }
                 ShopperState::Panicked => {
                     // Do nothing, stay in panic state.
