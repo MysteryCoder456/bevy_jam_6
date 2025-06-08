@@ -4,7 +4,6 @@ use crate::screens::{
 };
 use avian2d::prelude::*;
 use bevy::{color::palettes::css::*, prelude::*};
-use rand::prelude::*;
 
 #[derive(Event)]
 pub struct SpawnShopper {
@@ -198,7 +197,7 @@ fn shopper_state_machine(
 
                     // Choose a random shelf to travel to
                     let target_shelf = {
-                        // Get the five closest shelves from this shopper
+                        // Choose a random shelf from the 5 closests shelves
                         let mut closest_shelves = shelf_query
                             .iter()
                             .map(|(shelf_entity, shelf_transform)| {
@@ -209,11 +208,7 @@ fn shopper_state_machine(
                             })
                             .collect::<Vec<_>>();
                         closest_shelves.sort_by_key(|(_, distance)| distance.round() as u32);
-                        let closest_shelves = closest_shelves.iter().take(5).collect::<Vec<_>>();
-
-                        // Choose a random shelf from the five closest ones
-                        let chosen_idx = rand::rng().random_range(0..closest_shelves.len());
-                        closest_shelves.get(chosen_idx).unwrap().0
+                        fastrand::choice(closest_shelves.iter().take(5)).unwrap().0
                     };
 
                     // Transition to traveling to the random shelf
@@ -242,11 +237,9 @@ fn shopper_state_machine(
                     }
 
                     // Chose a random direction to wander off towards
-                    let wander_direction = Vec2::new(
-                        rand::rng().random_range(-1.0..=1.0),
-                        rand::rng().random_range(-1.0..=1.0),
-                    )
-                    .normalize_or_zero();
+                    let wander_direction =
+                        Vec2::new(fastrand::f32() * 2.0 - 1.0, fastrand::f32() * 2.0 - 1.0)
+                            .normalize_or_zero();
 
                     *shopper_state = ShopperState::Wandering {
                         timer: Timer::from_seconds(10.0, TimerMode::Once),
