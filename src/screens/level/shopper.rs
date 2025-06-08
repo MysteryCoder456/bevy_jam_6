@@ -39,7 +39,6 @@ pub fn plugin(app: &mut App) {
         Update,
         (
             spawn_shoppers.run_if(on_event::<SpawnShopper>),
-            shopper_rotation,
             shopper_state_machine,
             shopper_wandering.after(shopper_state_machine),
             shopper_traveling.after(shopper_state_machine),
@@ -84,6 +83,8 @@ fn spawn_shoppers(mut commands: Commands, mut events: EventReader<SpawnShopper>)
             CollisionEventsEnabled,
             LinearDamping(1.2),
             AngularDamping(2.0),
+            MaxLinearSpeed(100.0),
+            ExternalImpulse::default().with_persistence(false),
         ));
     }
 }
@@ -94,43 +95,33 @@ fn despawn_shoppers(mut commands: Commands, query: Query<Entity, With<Shopper>>)
     }
 }
 
-fn shopper_rotation(
-    mut query: Query<(&mut Transform, &LinearVelocity), (With<Shopper>, Changed<LinearVelocity>)>,
-) {
-    query.par_iter_mut().for_each(|(mut transform, velocity)| {
-        if velocity.0 != Vec2::ZERO {
-            // Make the shopper face the direction its moving in
-            transform.rotation = Quat::from_rotation_z(velocity.0.to_angle());
-        }
-    });
-}
-
 fn shopper_wandering(
-    mut shopper_query: Query<(&mut LinearVelocity, &ShopperState), With<Shopper>>,
+    mut query: Query<(&mut Transform, &mut ExternalImpulse, &ShopperState), With<Shopper>>,
 ) {
-    let wander_speed = 35.0;
+    let wander_impulse = 400.0;
 
-    shopper_query
+    query
         .par_iter_mut()
-        .for_each(|(mut velocity, shopper_state)| {
+        .for_each(|(mut transform, mut impulse, shopper_state)| {
             if let ShopperState::Wandering {
                 timer: _,
                 direction,
             } = *shopper_state
             {
-                velocity.0 = direction * wander_speed;
+                transform.rotation = Quat::from_rotation_z(direction.to_angle());
+                impulse.apply_impulse(direction * wander_impulse);
             }
         });
 }
 
 fn shopper_traveling(
-    mut shopper_query: Query<(&Transform, &mut LinearVelocity, &ShopperState), With<Shopper>>,
+    mut shopper_query: Query<(&mut Transform, &mut ExternalImpulse, &ShopperState), With<Shopper>>,
     shelf_query: Query<&Transform, (With<Shelf>, Without<Shopper>)>,
 ) {
-    let travel_speed = 80.0;
+    let travel_impulse = 1000.0;
 
     shopper_query.par_iter_mut().for_each(
-        |(shopper_transform, mut shopper_velocity, shopper_state)| {
+        |(mut shopper_transform, mut shopper_impulse, shopper_state)| {
             if let ShopperState::Traveling { target_shelf } = *shopper_state {
                 if let Ok(shelf_transform) = shelf_query.get(target_shelf) {
                     // Calculate direction to the target shelf
@@ -138,7 +129,8 @@ fn shopper_traveling(
                         .truncate()
                         .normalize_or_zero();
 
-                    shopper_velocity.0 = direction * travel_speed;
+                    shopper_transform.rotation = Quat::from_rotation_z(direction.to_angle());
+                    shopper_impulse.apply_impulse(direction * travel_impulse);
                 }
             }
         },
