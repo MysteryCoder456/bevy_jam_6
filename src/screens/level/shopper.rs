@@ -20,9 +20,18 @@ pub struct Shopper {
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 enum ShopperState {
-    Wandering { timer: Timer, direction: Vec2 },
-    Traveling { target_shelf: Entity },
-    Taking { timer: Timer, target_shelf: Entity },
+    Wandering {
+        timer: Timer,
+        direction: Vec2,
+    },
+    Traveling {
+        target_shelf: Entity,
+    },
+    Taking {
+        timer: Timer,
+        taking_timer: Timer,
+        target_shelf: Entity,
+    },
     Panicked,
 }
 
@@ -137,8 +146,32 @@ fn shopper_traveling(
     );
 }
 
-fn shopper_taking() {
-    // TODO: implement
+fn shopper_taking(
+    time: Res<Time>,
+    mut shopper_query: Query<(&mut Inventory, &mut ShopperState), With<Shopper>>,
+    shelf_query: Query<&Shelf>,
+) {
+    shopper_query
+        .par_iter_mut()
+        .for_each(|(mut inventory, mut shopper_state)| {
+            if let ShopperState::Taking {
+                timer: _,
+                ref mut taking_timer,
+                target_shelf,
+            } = *shopper_state
+            {
+                if let Ok(shelf) = shelf_query.get(target_shelf) {
+                    if taking_timer.tick(time.delta()).just_finished() {
+                        // Add the shelf's main item to the shopper's inventory
+                        inventory
+                            .0
+                            .entry(shelf.main_item)
+                            .and_modify(|e| *e += 1)
+                            .or_insert(1);
+                    }
+                }
+            }
+        });
 }
 
 fn shopper_panicked() {
@@ -193,12 +226,14 @@ fn shopper_state_machine(
                     if shopper.current_shelf.is_some_and(|s| s == target_shelf) {
                         *shopper_state = ShopperState::Taking {
                             timer: Timer::from_seconds(8.0, TimerMode::Once),
+                            taking_timer: Timer::from_seconds(1.5, TimerMode::Repeating),
                             target_shelf,
                         };
                     }
                 }
                 ShopperState::Taking {
                     ref mut timer,
+                    taking_timer: _,
                     target_shelf: _,
                 } => {
                     if !timer.tick(time.delta()).just_finished() {
