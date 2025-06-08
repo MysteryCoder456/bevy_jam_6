@@ -1,5 +1,6 @@
 mod player;
 mod shelf;
+mod shopper;
 
 use std::{collections::HashMap, fmt::Display};
 
@@ -7,6 +8,7 @@ use crate::screens::Screen;
 use avian2d::prelude::*;
 use bevy::prelude::*;
 use shelf::{ShelfOrientation, SpawnShelf};
+use shopper::SpawnShopper;
 
 #[derive(PhysicsLayer, Default)]
 enum GameLayer {
@@ -46,14 +48,16 @@ pub fn plugin(app: &mut App) {
     app.register_type::<Inventory>();
 
     // Add game element plugins
-    app.add_plugins((player::plugin, shelf::plugin));
+    app.add_plugins((player::plugin, shelf::plugin, shopper::plugin));
 
-    // Screen enter and exit systems
+    // Gameplay systems
     app.add_systems(OnEnter(Screen::Level), spawn_level);
-    app.add_systems(OnExit(Screen::Level), despawn_level);
 }
 
-fn spawn_level(mut shelf_events: EventWriter<SpawnShelf>) {
+fn spawn_level(
+    mut shelf_events: EventWriter<SpawnShelf>,
+    mut shopper_events: EventWriter<SpawnShopper>,
+) {
     // Spawn a demo scene
 
     shelf_events.write_batch([
@@ -73,8 +77,13 @@ fn spawn_level(mut shelf_events: EventWriter<SpawnShelf>) {
             main_item: Item::Soap,
         },
     ]);
-}
 
-fn despawn_level() {
-    // TODO: despawn level elements
+    shopper_events.write_batch([
+        SpawnShopper {
+            position: Vec2::new(100.0, 100.0),
+        },
+        SpawnShopper {
+            position: Vec2::new(-100.0, -100.0),
+        },
+    ]);
 }

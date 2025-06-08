@@ -47,7 +47,7 @@ fn spawn_shelves(
     assets: Res<GameAssets>,
 ) {
     let shelf_size = Vec2::new(300.0, 80.0);
-    let sensor_size = Vec2::new(shelf_size.x, shelf_size.y / 3.0);
+    let sensor_size = Vec2::new(0.85 * shelf_size.x, 0.4 * shelf_size.y);
 
     for event in events.read() {
         commands
