@@ -39,6 +39,7 @@ pub fn plugin(app: &mut App) {
         Update,
         (
             spawn_shoppers.run_if(on_event::<SpawnShopper>),
+            shopper_rotation,
             shopper_state_machine,
             shopper_wandering.after(shopper_state_machine),
             shopper_traveling.after(shopper_state_machine),
@@ -93,36 +94,43 @@ fn despawn_shoppers(mut commands: Commands, query: Query<Entity, With<Shopper>>)
     }
 }
 
-fn shopper_wandering(
-    mut shopper_query: Query<(&mut Transform, &mut LinearVelocity, &ShopperState), With<Shopper>>,
+fn shopper_rotation(
+    mut query: Query<(&mut Transform, &LinearVelocity), (With<Shopper>, Changed<LinearVelocity>)>,
 ) {
-    let wander_speed = 50.0;
+    query.par_iter_mut().for_each(|(mut transform, velocity)| {
+        if velocity.0 != Vec2::ZERO {
+            // Make the shopper face the direction its moving in
+            transform.rotation = Quat::from_rotation_z(velocity.0.to_angle());
+        }
+    });
+}
+
+fn shopper_wandering(
+    mut shopper_query: Query<(&mut LinearVelocity, &ShopperState), With<Shopper>>,
+) {
+    let wander_speed = 35.0;
 
     shopper_query
         .par_iter_mut()
-        .for_each(|(mut transform, mut velocity, shopper_state)| {
+        .for_each(|(mut velocity, shopper_state)| {
             if let ShopperState::Wandering {
                 timer: _,
                 direction,
             } = *shopper_state
             {
-                if direction != Vec2::ZERO {
-                    // Make the shopper face the direction its wandering in
-                    transform.rotation = Quat::from_rotation_z(direction.to_angle());
-                }
                 velocity.0 = direction * wander_speed;
             }
         });
 }
 
 fn shopper_traveling(
-    mut shopper_query: Query<(&mut Transform, &mut LinearVelocity, &ShopperState), With<Shopper>>,
+    mut shopper_query: Query<(&Transform, &mut LinearVelocity, &ShopperState), With<Shopper>>,
     shelf_query: Query<&Transform, (With<Shelf>, Without<Shopper>)>,
 ) {
     let travel_speed = 80.0;
 
     shopper_query.par_iter_mut().for_each(
-        |(mut shopper_transform, mut shopper_velocity, shopper_state)| {
+        |(shopper_transform, mut shopper_velocity, shopper_state)| {
             if let ShopperState::Traveling { target_shelf } = *shopper_state {
                 if let Ok(shelf_transform) = shelf_query.get(target_shelf) {
                     // Calculate direction to the target shelf
@@ -130,8 +138,6 @@ fn shopper_traveling(
                         .truncate()
                         .normalize_or_zero();
 
-                    // Make the shopper face the direction its wandering in
-                    shopper_transform.rotation = Quat::from_rotation_z(direction.to_angle());
                     shopper_velocity.0 = direction * travel_speed;
                 }
             }
@@ -194,7 +200,7 @@ fn shopper_state_machine(
                     // Transition to taking from the shelf if reached the target shelf
                     if shopper.current_shelf.is_some_and(|s| s == target_shelf) {
                         *shopper_state = ShopperState::Taking {
-                            timer: Timer::from_seconds(10.0, TimerMode::Once),
+                            timer: Timer::from_seconds(8.0, TimerMode::Once),
                             target_shelf,
                         };
                     }
@@ -216,7 +222,7 @@ fn shopper_state_machine(
                     .normalize_or_zero();
 
                     *shopper_state = ShopperState::Wandering {
-                        timer: Timer::from_seconds(15.0, TimerMode::Once),
+                        timer: Timer::from_seconds(10.0, TimerMode::Once),
                         direction: wander_direction,
                     };
                 }
