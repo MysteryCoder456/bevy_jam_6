@@ -2,7 +2,7 @@ use crate::{
     GameAssets,
     screens::{
         Screen,
-        level::{GameLayer, Item, player::Player},
+        level::{GameLayer, Item, player::Player, shopper::Shopper},
     },
 };
 use avian2d::prelude::*;
@@ -67,7 +67,7 @@ fn spawn_shelves(
                 },
                 RigidBody::Static,
                 Collider::rectangle(shelf_size.x, shelf_size.y),
-                CollisionLayers::new(GameLayer::Shelf, [GameLayer::Shopper]),
+                CollisionLayers::new(GameLayer::Shelf, [GameLayer::Player, GameLayer::NPC]),
                 Text2d::new(event.main_item.to_string()),
                 TextFont {
                     font: assets.game_font.clone(),
@@ -76,6 +76,7 @@ fn spawn_shelves(
                 },
             ))
             .with_children(|parent| {
+                // Shopper Sensors
                 parent
                     .spawn((
                         Name::new("Shopper Sensor 1"),
@@ -83,13 +84,12 @@ fn spawn_shelves(
                         Transform::from_xyz(0.0, (shelf_size.y + sensor_size.y) / 2.0, 0.0),
                         Sensor,
                         Collider::rectangle(sensor_size.x, sensor_size.y),
-                        CollisionLayers::new(GameLayer::Shelf, [GameLayer::Shopper]),
+                        CollisionLayers::new(GameLayer::Shelf, [GameLayer::Player, GameLayer::NPC]),
                         CollisionEventsEnabled,
                         // Sprite::from_color(LIGHT_BLUE.with_alpha(0.5), sensor_size),
                     ))
-                    .observe(player_approached_shelf)
-                    .observe(player_departed_shelf);
-
+                    .observe(shopper_approached_shelf)
+                    .observe(shopper_departed_shelf);
                 parent
                     .spawn((
                         Name::new("Shopper Sensor 2"),
@@ -97,12 +97,20 @@ fn spawn_shelves(
                         Transform::from_xyz(0.0, -(shelf_size.y + sensor_size.y) / 2.0, 0.0),
                         Sensor,
                         Collider::rectangle(sensor_size.x, sensor_size.y),
-                        CollisionLayers::new(GameLayer::Shelf, [GameLayer::Shopper]),
+                        CollisionLayers::new(GameLayer::Shelf, [GameLayer::Player, GameLayer::NPC]),
                         CollisionEventsEnabled,
                         // Sprite::from_color(LIGHT_BLUE.with_alpha(0.5), sensor_size),
                     ))
-                    .observe(player_approached_shelf)
-                    .observe(player_departed_shelf);
+                    .observe(shopper_approached_shelf)
+                    .observe(shopper_departed_shelf);
+
+                // Collider to prevent NPC shoppers getting stuck on shelf sides
+                parent.spawn((
+                    Transform::from_rotation(Quat::from_rotation_z(FRAC_PI_2)),
+                    Collider::capsule(shelf_size.y / 2.0, shelf_size.x),
+                    CollisionLayers::new(GameLayer::Shelf, [GameLayer::Player, GameLayer::NPC]),
+                    Friction::new(0.0),
+                ));
             });
     }
 }
@@ -113,10 +121,11 @@ fn despawn_shelves(mut commands: Commands, shelf_query: Query<Entity, With<Shelf
     }
 }
 
-fn player_approached_shelf(
+fn shopper_approached_shelf(
     trigger: Trigger<OnCollisionStart>,
     child_of_query: Query<&ChildOf>,
     mut player_query: Query<&mut Player>,
+    mut shopper_query: Query<&mut Shopper>,
 ) {
     let sensor_entity = trigger.target();
 
@@ -126,13 +135,31 @@ fn player_approached_shelf(
         if let Ok(mut player) = player_query.get_mut(trigger.collider) {
             log::debug!("Player has approached shelf sensor {}", sensor_entity);
             player.current_shelf = Some(shelf_entity);
+        } else if let Ok(mut shopper) = shopper_query.get_mut(trigger.collider) {
+            log::debug!(
+                "Shopper {} has approached shelf sensor {}",
+                trigger.collider,
+                sensor_entity
+            );
+            shopper.current_shelf = Some(shelf_entity);
         }
     }
 }
 
-fn player_departed_shelf(trigger: Trigger<OnCollisionEnd>, mut player_query: Query<&mut Player>) {
+fn shopper_departed_shelf(
+    trigger: Trigger<OnCollisionEnd>,
+    mut player_query: Query<&mut Player>,
+    mut shopper_query: Query<&mut Shopper>,
+) {
     if let Ok(mut player) = player_query.get_mut(trigger.collider) {
         log::debug!("Player has departed shelf sensor {}", trigger.target());
         player.current_shelf = None;
+    } else if let Ok(mut shopper) = shopper_query.get_mut(trigger.collider) {
+        log::debug!(
+            "Shopper {} has departed shelf sensor {}",
+            trigger.collider,
+            trigger.target()
+        );
+        shopper.current_shelf = None;
     }
 }

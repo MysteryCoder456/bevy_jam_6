@@ -14,7 +14,8 @@ use shopper::SpawnShopper;
 enum GameLayer {
     #[default]
     Default,
-    Shopper,
+    Player,
+    NPC,
     Shelf,
 }
 

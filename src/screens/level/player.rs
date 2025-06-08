@@ -105,7 +105,7 @@ fn spawn_player(mut commands: Commands) {
         Sprite::from_color(LIMEGREEN, player_size),
         RigidBody::Dynamic,
         Collider::rectangle(player_size.x, player_size.y),
-        CollisionLayers::new(GameLayer::Shopper, [GameLayer::Shopper, GameLayer::Shelf]),
+        CollisionLayers::new(GameLayer::Player, [GameLayer::NPC, GameLayer::Shelf]),
         LinearDamping(1.2),
         AngularDamping(2.0),
         actions,

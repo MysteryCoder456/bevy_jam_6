@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use crate::screens::{
     Screen,
     level::{GameLayer, Inventory, shelf::Shelf},
@@ -16,15 +14,15 @@ pub struct SpawnShopper {
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 pub struct Shopper {
-    state_timer: Timer,
+    pub current_shelf: Option<Entity>,
 }
 
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 enum ShopperState {
-    Wandering { direction: Vec2 },
+    Wandering { timer: Timer, direction: Vec2 },
     Traveling { target_shelf: Entity },
-    Taking { target_shelf: Entity },
+    Taking { timer: Timer, target_shelf: Entity },
     Panicked,
 }
 
@@ -59,9 +57,10 @@ fn spawn_shoppers(mut commands: Commands, mut events: EventReader<SpawnShopper>)
         commands.spawn((
             Name::new("Shopper"),
             Shopper {
-                state_timer: Timer::from_seconds(3.0, TimerMode::Repeating),
+                current_shelf: None,
             },
             ShopperState::Wandering {
+                timer: Timer::from_seconds(2.0, TimerMode::Once),
                 direction: Vec2::ZERO,
             },
             Inventory::default(),
@@ -72,7 +71,16 @@ fn spawn_shoppers(mut commands: Commands, mut events: EventReader<SpawnShopper>)
             },
             RigidBody::Dynamic,
             Collider::rectangle(shopper_size.x, shopper_size.y),
-            CollisionLayers::new(GameLayer::Shopper, [GameLayer::Shopper, GameLayer::Shelf]),
+            CollisionLayers::new(
+                GameLayer::NPC,
+                [
+                    GameLayer::Default,
+                    GameLayer::Player,
+                    GameLayer::NPC,
+                    GameLayer::Shelf,
+                ],
+            ),
+            CollisionEventsEnabled,
             LinearDamping(1.2),
             AngularDamping(2.0),
         ));
@@ -93,7 +101,11 @@ fn shopper_wandering(
     shopper_query
         .par_iter_mut()
         .for_each(|(mut transform, mut velocity, shopper_state)| {
-            if let ShopperState::Wandering { direction } = *shopper_state {
+            if let ShopperState::Wandering {
+                timer: _,
+                direction,
+            } = *shopper_state
+            {
                 if direction != Vec2::ZERO {
                     // Make the shopper face the direction its wandering in
                     transform.rotation = Quat::from_rotation_z(direction.to_angle());
@@ -137,18 +149,22 @@ fn shopper_panicked() {
 
 fn shopper_state_machine(
     time: Res<Time>,
-    mut shopper_query: Query<(&Transform, &mut Shopper, &mut ShopperState)>,
+    mut shopper_query: Query<(&Transform, &Shopper, &mut ShopperState)>,
     shelf_query: Query<(Entity, &Transform), With<Shelf>>,
 ) {
     shopper_query
         .par_iter_mut()
-        .for_each(|(shopper_transform, mut shopper, mut shopper_state)| {
-            if !shopper.state_timer.tick(time.delta()).just_finished() {
-                return;
-            }
+        .for_each(|(shopper_transform, shopper, mut shopper_state)| {
+            match *shopper_state {
+                ShopperState::Wandering {
+                    ref mut timer,
+                    direction: _,
+                } => {
+                    if !timer.tick(time.delta()).just_finished() {
+                        // Continue wandering
+                        return;
+                    }
 
-            let next_state = match *shopper_state {
-                ShopperState::Wandering { direction: _ } => {
                     // Choose a random shelf to travel to
                     let target_shelf = {
                         // Get the five closest shelves from this shopper
@@ -170,20 +186,28 @@ fn shopper_state_machine(
                     };
 
                     // Transition to traveling to the random shelf
-                    shopper.state_timer.set_duration(Duration::from_secs(2));
-                    shopper.state_timer.reset();
-                    ShopperState::Traveling { target_shelf }
+                    *shopper_state = ShopperState::Traveling { target_shelf };
 
                     // TODO: Alternatively, panic if seeing another shopper take an item
                 }
                 ShopperState::Traveling { target_shelf } => {
-                    // Transition to taking from the shelf
-                    // TODO: ONLY if shopper collides with the target shelf
-                    shopper.state_timer.set_duration(Duration::from_secs(10));
-                    shopper.state_timer.reset();
-                    ShopperState::Taking { target_shelf }
+                    // Transition to taking from the shelf if reached the target shelf
+                    if shopper.current_shelf.is_some_and(|s| s == target_shelf) {
+                        *shopper_state = ShopperState::Taking {
+                            timer: Timer::from_seconds(10.0, TimerMode::Once),
+                            target_shelf,
+                        };
+                    }
                 }
-                ShopperState::Taking { target_shelf: _ } => {
+                ShopperState::Taking {
+                    ref mut timer,
+                    target_shelf: _,
+                } => {
+                    if !timer.tick(time.delta()).just_finished() {
+                        // Continue taking
+                        return;
+                    }
+
                     // Chose a random direction to wander off towards
                     let wander_direction = Vec2::new(
                         rand::rng().random_range(-1.0..=1.0),
@@ -191,17 +215,14 @@ fn shopper_state_machine(
                     )
                     .normalize_or_zero();
 
-                    shopper.state_timer.set_duration(Duration::from_secs(15));
-                    shopper.state_timer.reset();
-                    ShopperState::Wandering {
+                    *shopper_state = ShopperState::Wandering {
+                        timer: Timer::from_seconds(15.0, TimerMode::Once),
                         direction: wander_direction,
-                    }
+                    };
                 }
                 ShopperState::Panicked => {
                     // Do nothing, stay in panic state.
-                    ShopperState::Panicked
                 }
-            };
-            *shopper_state = next_state;
+            }
         });
 }
