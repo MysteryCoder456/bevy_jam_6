@@ -78,11 +78,14 @@ fn despawn_main_menu(mut commands: Commands, query: Single<Entity, With<MainMenu
     commands.entity(query.entity()).despawn();
 }
 
-fn play_button_interaction(query: Single<&Interaction, (Changed<Interaction>, With<PlayButton>)>) {
+fn play_button_interaction(
+    mut next_screen: ResMut<NextState<Screen>>,
+    query: Single<&Interaction, (Changed<Interaction>, With<PlayButton>)>,
+) {
     match *query {
         Interaction::Pressed => {
             log::info!("Starting game...");
-            // TODO
+            next_screen.set(Screen::Level);
         }
         Interaction::Hovered => {}
         Interaction::None => {}
