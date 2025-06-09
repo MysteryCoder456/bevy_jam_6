@@ -1,9 +1,16 @@
 use crate::screens::{
     Screen,
-    level::{GameLayer, Inventory, shelf::Shelf},
+    level::{
+        GameLayer, Inventory,
+        player::{Player, PlayerPickedItem},
+        shelf::Shelf,
+    },
 };
 use avian2d::prelude::*;
 use bevy::{color::palettes::css::*, prelude::*};
+
+const PANIC_THRESHOLD: u32 = 5;
+const PANIC_DISTANCE: f32 = 300.0;
 
 #[derive(Event)]
 pub struct SpawnShopper {
@@ -14,6 +21,7 @@ pub struct SpawnShopper {
 #[reflect(Component)]
 pub struct Shopper {
     pub current_shelf: Option<Entity>,
+    panic_meter: u32,
 }
 
 #[derive(Component, Reflect)]
@@ -56,6 +64,9 @@ pub fn plugin(app: &mut App) {
             .run_if(in_state(Screen::Level)),
     );
     app.add_systems(OnExit(Screen::Level), despawn_shoppers);
+
+    // Add observers
+    app.add_observer(panic_meter);
 }
 
 fn spawn_shoppers(mut commands: Commands, mut events: EventReader<SpawnShopper>) {
@@ -66,6 +77,7 @@ fn spawn_shoppers(mut commands: Commands, mut events: EventReader<SpawnShopper>)
             Name::new("Shopper"),
             Shopper {
                 current_shelf: None,
+                panic_meter: 0,
             },
             ShopperState::Wandering {
                 timer: Timer::from_seconds(2.0, TimerMode::Once),
@@ -101,6 +113,25 @@ fn despawn_shoppers(mut commands: Commands, query: Query<Entity, With<Shopper>>)
     for entity in query.iter() {
         commands.entity(entity).despawn();
     }
+}
+
+fn panic_meter(
+    _trigger: Trigger<PlayerPickedItem>,
+    mut shopper_query: Query<(&Transform, &mut Shopper)>,
+    player_query: Single<&Transform, With<Player>>,
+) {
+    shopper_query
+        .par_iter_mut()
+        .for_each(|(shopper_transform, mut shopper)| {
+            let distance = shopper_transform
+                .translation
+                .truncate()
+                .distance(player_query.translation.truncate());
+
+            if distance <= PANIC_DISTANCE {
+                shopper.panic_meter += 1;
+            }
+        });
 }
 
 fn shopper_wandering(
@@ -173,8 +204,26 @@ fn shopper_taking(
         });
 }
 
-fn shopper_panicked() {
-    // TODO: implement
+fn shopper_panicked(
+    mut shopper_query: Query<(&mut Transform, &mut ExternalImpulse, &ShopperState), With<Shopper>>,
+    player_query: Single<&Transform, With<Player>>,
+) {
+    let panic_impulse = 5000.0;
+
+    shopper_query.par_iter_mut().for_each(
+        |(mut shopper_transform, mut shopper_impulse, shopper_state)| {
+            if let ShopperState::Panicked = *shopper_state {
+                // Calculate direction towards the player
+                let direction = (player_query.translation - shopper_transform.translation)
+                    .truncate()
+                    .normalize_or_zero();
+
+                // Stampede the player lmao
+                shopper_transform.rotation = Quat::from_rotation_z(direction.to_angle());
+                shopper_impulse.apply_impulse(direction * panic_impulse);
+            }
+        },
+    );
 }
 
 fn shopper_state_machine(
@@ -190,6 +239,13 @@ fn shopper_state_machine(
                     ref mut timer,
                     direction: _,
                 } => {
+                    // If shopper is about to panic, just panic
+                    if shopper.panic_meter >= PANIC_THRESHOLD {
+                        // Transition to panicked state
+                        *shopper_state = ShopperState::Panicked;
+                        return;
+                    }
+
                     if !timer.tick(time.delta()).just_finished() {
                         // Continue wandering
                         return;
@@ -213,8 +269,6 @@ fn shopper_state_machine(
 
                     // Transition to traveling to the random shelf
                     *shopper_state = ShopperState::Traveling { target_shelf };
-
-                    // TODO: Alternatively, panic if seeing another shopper take an item
                 }
                 ShopperState::Traveling { target_shelf } => {
                     // Transition to taking from the shelf if reached the target shelf

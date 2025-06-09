@@ -38,6 +38,9 @@ pub struct Player {
     pub current_shelf: Option<Entity>,
 }
 
+#[derive(Event)]
+pub struct PlayerPickedItem;
+
 #[derive(Component)]
 struct InventoryUI;
 
@@ -281,6 +284,7 @@ fn player_steering(
 
 fn player_interaction(
     trigger: Trigger<Fired<Interact>>,
+    mut commands: Commands,
     mut player_query: Query<(&Player, &mut Inventory)>,
     shelf_query: Query<&Shelf>,
 ) {
@@ -292,6 +296,7 @@ fn player_interaction(
                 } else {
                     player_inventory.0.insert(shelf.main_item, 1);
                 }
+                commands.trigger(PlayerPickedItem);
             }
         }
     }
