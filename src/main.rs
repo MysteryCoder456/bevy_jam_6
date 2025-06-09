@@ -88,5 +88,5 @@ fn load_assets(
     let game_font = asset_server.load("fonts/Pixellari.ttf");
 
     commands.insert_resource(GameAssets { ui_font, game_font });
-    next_screen.set(Screen::Level); // TODO: change to main menu
+    next_screen.set(Screen::MainMenu);
 }
