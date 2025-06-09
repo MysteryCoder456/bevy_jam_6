@@ -206,7 +206,7 @@ fn shopper_taking(
 
 fn shopper_panicked(
     mut shopper_query: Query<(&mut Transform, &mut ExternalImpulse, &ShopperState), With<Shopper>>,
-    player_query: Single<&Transform, With<Player>>,
+    player_query: Single<&Transform, (With<Player>, Without<Shopper>)>,
 ) {
     let panic_impulse = 5000.0;
 
