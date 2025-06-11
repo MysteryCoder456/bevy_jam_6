@@ -65,19 +65,8 @@ pub fn plugin(app: &mut App) {
     app.register_type::<Inventory>();
 
     // Add debug input actions
-    cfg_if::cfg_if! {
-        if #[cfg(feature = "dev")] {
-            let mut actions = Actions::<DebugLevelContext>::default();
-            actions
-                .bind::<DebugSpawnShelfVertical>()
-                .to(KeyCode::KeyV)
-                .with_conditions(Press::default());
-            actions
-                .bind::<DebugSpawnShelfHorizontal>()
-                .to(KeyCode::KeyH)
-                .with_conditions(Press::default());
-        }
-    }
+    #[cfg(feature = "dev")]
+    app.add_input_context::<DebugLevelContext>();
 
     // Add game element plugins
     app.add_plugins((player::plugin, shelf::plugin, shopper::plugin));
@@ -88,6 +77,9 @@ pub fn plugin(app: &mut App) {
     // Add debug systems
     cfg_if::cfg_if! {
         if #[cfg(feature = "dev")] {
+            app.add_systems(OnEnter(Screen::Level), add_debug_actions);
+            app.add_systems(OnExit(Screen::Level), remove_debug_actions);
+
             app.add_observer(spawn_vertical_shelf);
             app.add_observer(spawn_horizontal_shelf);
         }
@@ -128,12 +120,41 @@ fn spawn_level(
     ]);
 }
 
+#[cfg(feature = "dev")]
+fn create_debug_actions() -> Actions<DebugLevelContext> {
+    let mut actions = Actions::<DebugLevelContext>::default();
+    actions
+        .bind::<DebugSpawnShelfVertical>()
+        .to(KeyCode::KeyV)
+        .with_conditions(Press::default());
+    actions
+        .bind::<DebugSpawnShelfHorizontal>()
+        .to(KeyCode::KeyH)
+        .with_conditions(Press::default());
+    actions
+}
+
+#[cfg(feature = "dev")]
+fn add_debug_actions(mut commands: Commands) {
+    let actions = create_debug_actions();
+    commands.spawn(actions);
+}
+
+#[cfg(feature = "dev")]
+fn remove_debug_actions(
+    mut commands: Commands,
+    query: Single<Entity, With<Actions<DebugLevelContext>>>,
+) {
+    commands.entity(query.entity()).despawn();
+}
+
+#[cfg(feature = "dev")]
 fn spawn_vertical_shelf(
     _trigger: Trigger<Fired<DebugSpawnShelfVertical>>,
     mut shelf_events: EventWriter<SpawnShelf>,
     player_query: Single<&Transform, With<Player>>,
 ) {
-    let offset = Vec2::new(0.0, 50.0);
+    let offset = Vec2::new(100.0, 0.0);
     shelf_events.write(SpawnShelf {
         position: player_query.translation.truncate() + offset,
         orientation: ShelfOrientation::Vertical,
@@ -141,12 +162,13 @@ fn spawn_vertical_shelf(
     });
 }
 
+#[cfg(feature = "dev")]
 fn spawn_horizontal_shelf(
     _trigger: Trigger<Fired<DebugSpawnShelfHorizontal>>,
     mut shelf_events: EventWriter<SpawnShelf>,
     player_query: Single<&Transform, With<Player>>,
 ) {
-    let offset = Vec2::new(50.0, 0.0);
+    let offset = Vec2::new(0.0, 100.0);
     shelf_events.write(SpawnShelf {
         position: player_query.translation.truncate() + offset,
         orientation: ShelfOrientation::Horizontal,

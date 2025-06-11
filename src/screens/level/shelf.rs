@@ -21,7 +21,8 @@ pub struct SpawnShelf {
     pub main_item: Item,
 }
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
+#[reflect(Component)]
 pub struct Shelf {
     pub main_item: Item,
 }
@@ -30,6 +31,9 @@ pub struct Shelf {
 struct ShopperSensor;
 
 pub fn plugin(app: &mut App) {
+    // Register necessary types
+    app.register_type::<Shelf>();
+
     // Register events
     app.add_event::<SpawnShelf>();
 
@@ -105,12 +109,12 @@ fn spawn_shelves(
                     .observe(shopper_departed_shelf);
 
                 // Collider to prevent NPC shoppers getting stuck on shelf sides
-                parent.spawn((
-                    Transform::from_rotation(Quat::from_rotation_z(FRAC_PI_2)),
-                    Collider::capsule(shelf_size.y / 2.0, shelf_size.x),
-                    CollisionLayers::new(GameLayer::Shelf, [GameLayer::NPC]),
-                    Friction::new(0.0),
-                ));
+                // parent.spawn((
+                //     Transform::from_rotation(Quat::from_rotation_z(FRAC_PI_2)),
+                //     Collider::capsule(shelf_size.y / 2.0, shelf_size.x),
+                //     CollisionLayers::new(GameLayer::Shelf, [GameLayer::NPC]),
+                //     Friction::new(0.0),
+                // ));
             });
     }
 }
