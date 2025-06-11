@@ -20,6 +20,7 @@ bevy-inspector-egui = { version = "0.31", optional = true }
 bevy_enhanced_input = "0.12"
 avian2d = "0.3"
 fastrand = { version = "2", features = ["js"] }
+cfg-if = "1.0"
 
 # Your web builds will start failing if you add a dependency that pulls in `getrandom` v0.3+.
 # To fix this, you should tell `getrandom` to use the `wasm_js` backend on Wasm.
