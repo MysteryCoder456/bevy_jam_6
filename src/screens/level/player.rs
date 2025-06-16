@@ -2,7 +2,7 @@ use crate::{
     DefaultCamera, GameAssets,
     screens::{
         Screen,
-        level::{GameLayer, Inventory, Item, shelf::Shelf},
+        level::{GameLayer, Inventory, Item, Objectives, shelf::Shelf},
     },
 };
 use avian2d::prelude::*;
@@ -215,8 +215,28 @@ fn despawn_inventory_ui(mut commands: Commands, query: Single<Entity, With<Inven
 
 fn inventory_item_widget(item: Item, quantity: u32, font: Handle<Font>) -> impl Bundle {
     (
-        Name::new(format!("Inventory Item ({} x{})", item, quantity)),
-        Text::new(format!("{} x{}", item, quantity)),
+        Name::new(format!("Inventory Item {} ({})", item, quantity)),
+        Text::new(format!("{} ({})", item, quantity)),
+        TextFont {
+            font,
+            font_size: 18.0,
+            ..Default::default()
+        },
+    )
+}
+
+fn item_objective_widget(
+    item: Item,
+    quantity: u32,
+    required_quantity: u32,
+    font: Handle<Font>,
+) -> impl Bundle {
+    (
+        Name::new(format!(
+            "Inventory Item {} ({} of {})",
+            item, quantity, required_quantity
+        )),
+        Text::new(format!("{} ({} of {})", item, quantity, required_quantity)),
         TextFont {
             font,
             font_size: 18.0,
@@ -228,21 +248,44 @@ fn inventory_item_widget(item: Item, quantity: u32, font: Handle<Font>) -> impl 
 fn inventory_changed(
     mut commands: Commands,
     assets: Res<GameAssets>,
+    objectives: Res<Objectives>,
     player_query: Single<&Inventory, (Changed<Inventory>, With<Player>)>,
     container_query: Single<Entity, With<InventoryUIContainer>>,
 ) {
-    // CLear out existing items
+    // Clear out existing items
     commands
         .entity(container_query.entity())
         .despawn_related::<Children>();
 
-    // Reconstruct UI
+    // Add objective items first
+    commands
+        .entity(container_query.entity())
+        .with_children(|parent| {
+            objectives
+                .items
+                .iter()
+                .map(|(item, required_quantity)| {
+                    let quantity = player_query.0.get(item).map_or(0, |q| *q);
+                    item_objective_widget(
+                        *item,
+                        quantity,
+                        *required_quantity,
+                        assets.ui_font.clone(),
+                    )
+                })
+                .for_each(|widget| {
+                    parent.spawn(widget);
+                });
+        });
+
+    // Add optional items after
     commands
         .entity(container_query.entity())
         .with_children(|parent| {
             player_query
                 .0
                 .iter()
+                .filter(|(item, _)| !objectives.items.contains_key(item))
                 .map(|(item, quantity)| {
                     inventory_item_widget(*item, *quantity, assets.ui_font.clone())
                 })

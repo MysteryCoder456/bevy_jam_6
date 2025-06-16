@@ -59,14 +59,30 @@ impl Display for Item {
 #[reflect(Component)]
 struct Inventory(HashMap<Item, u32>);
 
+#[derive(Resource, Reflect)]
+#[reflect(Resource)]
+struct Objectives {
+    items: HashMap<Item, u32>,
+}
+
 pub fn plugin(app: &mut App) {
     // Register necessary types
     app.register_type::<Item>();
     app.register_type::<Inventory>();
+    app.register_type::<Objectives>();
 
     // Add debug input actions
     #[cfg(feature = "dev")]
     app.add_input_context::<DebugLevelContext>();
+
+    // Add resources
+    app.insert_resource(Objectives {
+        items: HashMap::from([
+            (Item::ToiletPaper, 12),
+            (Item::CannedTuna, 8),
+            (Item::Soap, 9),
+        ]),
+    });
 
     // Add game element plugins
     app.add_plugins((player::plugin, shelf::plugin, shopper::plugin));
