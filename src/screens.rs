@@ -1,5 +1,6 @@
 mod level;
 mod main_menu;
+mod win;
 
 use bevy::prelude::*;
 
@@ -9,11 +10,13 @@ pub enum Screen {
     Loading,
     MainMenu,
     Level,
+    Win,
+    GameOver,
 }
 
 pub fn plugin(app: &mut App) {
     // Add respective screen plugins
-    app.add_plugins((main_menu::plugin, level::plugin));
+    app.add_plugins((main_menu::plugin, level::plugin, win::plugin));
 
     // Initialize Screen state
     app.init_state::<Screen>();

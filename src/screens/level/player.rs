@@ -91,7 +91,7 @@ fn spawn_player_camera(
 
 fn despawn_player_camera(
     mut commands: Commands,
-    player_camera_query: Single<Entity, With<Camera2d>>,
+    player_camera_query: Single<Entity, With<PlayerCamera>>,
     mut default_camera_query: Single<&mut Camera, With<DefaultCamera>>,
 ) {
     commands.entity(player_camera_query.entity()).despawn();

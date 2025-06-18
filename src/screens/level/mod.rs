@@ -89,6 +89,7 @@ pub fn plugin(app: &mut App) {
 
     // Gameplay systems
     app.add_systems(OnEnter(Screen::Level), spawn_level);
+    app.add_systems(Update, objectives_fulfilled.run_if(in_state(Screen::Level)));
 
     // Add debug systems
     cfg_if::cfg_if! {
@@ -127,7 +128,7 @@ fn spawn_level(
         SpawnShelf {
             position: Vec2::new(0.0, -150.0),
             orientation: ShelfOrientation::Horizontal,
-            main_item: Item::InstantRamen,
+            main_item: Item::CannedTuna,
         },
         SpawnShelf {
             position: Vec2::new(0.0, -400.0),
@@ -144,6 +145,24 @@ fn spawn_level(
             position: Vec2::new(-300.0, -100.0),
         },
     ]);
+}
+
+fn objectives_fulfilled(
+    objectives: Res<Objectives>,
+    inventory: Single<&Inventory, (With<Player>, Changed<Inventory>)>,
+    mut next_screen: ResMut<NextState<Screen>>,
+) {
+    // Check if the player has collected all required items
+    let all_items_collected = objectives.items.iter().all(|(item, &required_count)| {
+        inventory
+            .0
+            .get(item)
+            .map_or(false, |&count| count >= required_count)
+    });
+
+    if all_items_collected {
+        next_screen.set(Screen::Win);
+    }
 }
 
 #[cfg(feature = "dev")]
