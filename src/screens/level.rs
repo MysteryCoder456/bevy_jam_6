@@ -110,28 +110,38 @@ fn spawn_level(
 
     shelf_events.write_batch([
         SpawnShelf {
-            position: Vec2::new(0.0, 200.0),
-            orientation: ShelfOrientation::Horizontal,
-            main_item: Item::ToiletPaper,
-        },
-        SpawnShelf {
-            position: Vec2::new(0.0, -200.0),
+            position: Vec2::new(0.0, 600.0),
             orientation: ShelfOrientation::Horizontal,
             main_item: Item::InstantRamen,
         },
         SpawnShelf {
-            position: Vec2::new(-300.0, 0.0),
-            orientation: ShelfOrientation::Vertical,
+            position: Vec2::new(0.0, 350.0),
+            orientation: ShelfOrientation::Horizontal,
+            main_item: Item::ToiletPaper,
+        },
+        SpawnShelf {
+            position: Vec2::new(0.0, 100.0),
+            orientation: ShelfOrientation::Horizontal,
             main_item: Item::Soap,
+        },
+        SpawnShelf {
+            position: Vec2::new(0.0, -150.0),
+            orientation: ShelfOrientation::Horizontal,
+            main_item: Item::InstantRamen,
+        },
+        SpawnShelf {
+            position: Vec2::new(0.0, -400.0),
+            orientation: ShelfOrientation::Horizontal,
+            main_item: Item::ToiletPaper,
         },
     ]);
 
     shopper_events.write_batch([
         SpawnShopper {
-            position: Vec2::new(100.0, 100.0),
+            position: Vec2::new(300.0, 100.0),
         },
         SpawnShopper {
-            position: Vec2::new(-100.0, -100.0),
+            position: Vec2::new(-300.0, -100.0),
         },
     ]);
 }
