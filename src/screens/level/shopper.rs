@@ -1,9 +1,12 @@
-use crate::screens::{
-    Screen,
-    level::{
-        GameLayer, Inventory,
-        player::{Player, PlayerPickedItem},
-        shelf::Shelf,
+use crate::{
+    GameAssets,
+    screens::{
+        Screen,
+        level::{
+            GameLayer, Inventory,
+            player::{Player, PlayerPickedItem},
+            shelf::Shelf,
+        },
     },
 };
 use avian2d::prelude::*;
@@ -42,6 +45,9 @@ enum ShopperState {
     Panicked,
 }
 
+#[derive(Component)]
+struct PanicMeterIndicator;
+
 pub fn plugin(app: &mut App) {
     // Register necessary types
     app.register_type::<Shopper>();
@@ -55,6 +61,7 @@ pub fn plugin(app: &mut App) {
         Update,
         (
             spawn_shoppers.run_if(on_event::<SpawnShopper>),
+            panic_meter_indicator,
             shopper_state_machine,
             shopper_wandering.after(shopper_state_machine),
             shopper_traveling.after(shopper_state_machine),
@@ -69,7 +76,11 @@ pub fn plugin(app: &mut App) {
     app.add_observer(panic_meter);
 }
 
-fn spawn_shoppers(mut commands: Commands, mut events: EventReader<SpawnShopper>) {
+fn spawn_shoppers(
+    mut commands: Commands,
+    assets: Res<GameAssets>,
+    mut events: EventReader<SpawnShopper>,
+) {
     let shopper_size = Vec2::new(50.0, 25.0);
 
     for event in events.read() {
@@ -105,6 +116,21 @@ fn spawn_shoppers(mut commands: Commands, mut events: EventReader<SpawnShopper>)
             AngularDamping(2.0),
             MaxLinearSpeed(100.0),
             ExternalImpulse::default().with_persistence(false),
+            children![(
+                Name::new("Panic Meter"),
+                PanicMeterIndicator,
+                Text::new(""),
+                TextColor(RED.into()),
+                TextFont {
+                    font: assets.game_font.clone(),
+                    font_size: 24.0,
+                    ..Default::default()
+                },
+                TextLayout {
+                    justify: JustifyText::Center,
+                    ..Default::default()
+                },
+            )],
         ));
     }
 }
@@ -132,6 +158,22 @@ fn panic_meter(
                 shopper.panic_meter += 1;
             }
         });
+}
+
+fn panic_meter_indicator(
+    shopper_query: Query<(&Shopper, &Children), Changed<Shopper>>,
+    mut panic_indicator_query: Query<&mut Text, With<PanicMeterIndicator>>,
+) {
+    for (shopper, shopper_children) in shopper_query.iter() {
+        let indicator = shopper_children
+            .iter()
+            .filter(|e| panic_indicator_query.contains(*e))
+            .next()
+            .map(|e| panic_indicator_query.get_mut(e).unwrap());
+        if let Some(mut indicator) = indicator {
+            indicator.0 = "!".repeat(shopper.panic_meter as usize);
+        }
+    }
 }
 
 fn shopper_wandering(
