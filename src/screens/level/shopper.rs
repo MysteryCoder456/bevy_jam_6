@@ -119,7 +119,7 @@ fn spawn_shoppers(
             children![(
                 Name::new("Panic Meter"),
                 PanicMeterIndicator,
-                Text::new(""),
+                Text2d::new(""),
                 TextColor(RED.into()),
                 TextFont {
                     font: assets.game_font.clone(),
@@ -162,7 +162,7 @@ fn panic_meter(
 
 fn panic_meter_indicator(
     shopper_query: Query<(&Shopper, &Children), Changed<Shopper>>,
-    mut panic_indicator_query: Query<&mut Text, With<PanicMeterIndicator>>,
+    mut panic_indicator_query: Query<&mut Text2d, With<PanicMeterIndicator>>,
 ) {
     for (shopper, shopper_children) in shopper_query.iter() {
         let indicator = shopper_children
