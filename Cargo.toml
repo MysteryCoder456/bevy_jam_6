@@ -23,7 +23,7 @@ fastrand = { version = "2", features = ["js"] }
 cfg-if = "1.0"
 
 # Tahoe workaround
-objc2 = { version = "0.6.1", features = ["relax-sign-encoding", "disable-encoding-assertions"] }
+objc2 = { version = "0.6.1", features = ["relax-sign-encoding", "disable-encoding-assertions"], optional = true }
 [profile.dev.package.objc2]
 debug-assertions = false
 
@@ -59,6 +59,7 @@ dev_native = [
     "bevy/embedded_watcher",
 ]
 bevy-inspector-egui = ["dep:bevy-inspector-egui"]
+tahoe-workaround = ["dep:objc2"]
 
 
 [package.metadata.bevy_cli.release]
