@@ -61,7 +61,8 @@ pub fn plugin(app: &mut App) {
         Update,
         (
             spawn_shoppers.run_if(on_event::<SpawnShopper>),
-            panic_meter_indicator,
+            panic_meter_indicator_text,
+            panic_meter_indicator_rotation,
             shopper_state_machine,
             shopper_wandering.after(shopper_state_machine),
             shopper_traveling.after(shopper_state_machine),
@@ -123,7 +124,7 @@ fn spawn_shoppers(
                 TextColor(RED.into()),
                 TextFont {
                     font: assets.game_font.clone(),
-                    font_size: 24.0,
+                    font_size: 16.0,
                     ..Default::default()
                 },
                 TextLayout {
@@ -160,7 +161,7 @@ fn panic_meter(
         });
 }
 
-fn panic_meter_indicator(
+fn panic_meter_indicator_text(
     shopper_query: Query<(&Shopper, &Children), Changed<Shopper>>,
     mut panic_indicator_query: Query<&mut Text2d, With<PanicMeterIndicator>>,
 ) {
@@ -172,6 +173,22 @@ fn panic_meter_indicator(
             .map(|e| panic_indicator_query.get_mut(e).unwrap());
         if let Some(mut indicator) = indicator {
             indicator.0 = "!".repeat(shopper.panic_meter as usize);
+        }
+    }
+}
+
+fn panic_meter_indicator_rotation(
+    shopper_query: Query<(&Transform, &Children), (With<Shopper>, Changed<Transform>)>,
+    mut panic_indicator_query: Query<&mut Transform, (With<PanicMeterIndicator>, Without<Shopper>)>,
+) {
+    for (shopper_transform, shopper_children) in shopper_query.iter() {
+        let transform = shopper_children
+            .iter()
+            .filter(|e| panic_indicator_query.contains(*e))
+            .next()
+            .map(|e| panic_indicator_query.get_mut(e).unwrap());
+        if let Some(mut transform) = transform {
+            transform.rotation = shopper_transform.rotation.conjugate();
         }
     }
 }
