@@ -2,11 +2,11 @@ mod player;
 mod shelf;
 mod shopper;
 
-use std::{collections::HashMap, fmt::Display};
+use std::collections::HashMap;
 
-use crate::screens::Screen;
+use crate::{GameAssets, screens::Screen};
 use avian2d::prelude::*;
-use bevy::prelude::*;
+use bevy::{color::palettes::css::*, prelude::*};
 use bevy_enhanced_input::prelude::*;
 use player::Player;
 use shelf::{ShelfOrientation, SpawnShelf};
@@ -43,7 +43,7 @@ enum Item {
     Soap,
 }
 
-impl Display for Item {
+impl std::fmt::Display for Item {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let str_repr = match self {
             Self::ToiletPaper => "Toilet Paper",
@@ -65,6 +65,13 @@ struct Objectives {
     items: HashMap<Item, u32>,
 }
 
+#[derive(Resource, Reflect)]
+#[reflect(Resource)]
+struct GameTimer(Timer);
+
+#[derive(Component)]
+struct GameTimerUI;
+
 pub fn plugin(app: &mut App) {
     // Register necessary types
     app.register_type::<Item>();
@@ -83,13 +90,18 @@ pub fn plugin(app: &mut App) {
             (Item::Soap, 9),
         ]),
     });
+    app.insert_resource(GameTimer(Timer::from_seconds(2.0 * 60.0, TimerMode::Once)));
 
     // Add game element plugins
     app.add_plugins((player::plugin, shelf::plugin, shopper::plugin));
 
     // Gameplay systems
-    app.add_systems(OnEnter(Screen::Level), spawn_level);
-    app.add_systems(Update, objectives_fulfilled.run_if(in_state(Screen::Level)));
+    app.add_systems(OnEnter(Screen::Level), (spawn_level, spawn_game_timer_ui));
+    app.add_systems(OnExit(Screen::Level), despawn_game_timer_ui);
+    app.add_systems(
+        Update,
+        (objectives_fulfilled, game_timer).run_if(in_state(Screen::Level)),
+    );
 
     // Add debug systems
     cfg_if::cfg_if! {
@@ -147,6 +159,37 @@ fn spawn_level(
     ]);
 }
 
+fn spawn_game_timer_ui(mut commands: Commands, timer: Res<GameTimer>, assets: Res<GameAssets>) {
+    commands.spawn((
+        Name::new("Game Timer UI"),
+        GameTimerUI,
+        Text::new(format!("{}s", timer.0.remaining().as_secs())),
+        TextColor(WHITE.into()),
+        TextFont {
+            font: assets.ui_font.clone(),
+            font_size: 18.0,
+            ..Default::default()
+        },
+        TextLayout::new_with_justify(JustifyText::Center),
+        BackgroundColor(BLACK.with_alpha(0.6).into()),
+        BorderRadius::new(Val::ZERO, Val::ZERO, Val::ZERO, Val::Px(8.0)),
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::ZERO,
+            right: Val::ZERO,
+            display: Display::Flex,
+            align_items: AlignItems::Center,
+            padding: UiRect::all(Val::Px(4.0)),
+            min_width: Val::Px(50.0),
+            ..Default::default()
+        },
+    ));
+}
+
+fn despawn_game_timer_ui(mut commands: Commands, query: Single<Entity, With<GameTimerUI>>) {
+    commands.entity(query.entity()).despawn();
+}
+
 fn objectives_fulfilled(
     objectives: Res<Objectives>,
     inventory: Single<&Inventory, (With<Player>, Changed<Inventory>)>,
@@ -162,6 +205,20 @@ fn objectives_fulfilled(
 
     if all_items_collected {
         next_screen.set(Screen::Win);
+    }
+}
+
+fn game_timer(
+    time: Res<Time>,
+    mut timer: ResMut<GameTimer>,
+    mut query: Single<&mut Text, With<GameTimerUI>>,
+    mut next_screen: ResMut<NextState<Screen>>,
+) {
+    timer.0.tick(time.delta());
+    query.0 = format!("{}s", timer.0.remaining().as_secs());
+
+    if timer.0.just_finished() {
+        next_screen.set(Screen::GameOver);
     }
 }
 

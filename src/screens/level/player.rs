@@ -169,6 +169,7 @@ fn spawn_inventory_ui(mut commands: Commands, assets: Res<GameAssets>) {
         Name::new("Inventory UI"),
         InventoryUI,
         BackgroundColor(BLACK.with_alpha(0.6).into()),
+        BorderRadius::new(Val::Px(8.0), Val::ZERO, Val::ZERO, Val::Px(8.0)),
         Node {
             position_type: PositionType::Absolute,
             top: Val::Percent(25.0),
@@ -177,6 +178,7 @@ fn spawn_inventory_ui(mut commands: Commands, assets: Res<GameAssets>) {
             height: Val::Vh(50.0),
             display: Display::Flex,
             flex_direction: FlexDirection::Column,
+            padding: UiRect::all(Val::Px(4.0)),
             ..Default::default()
         },
         children![
