@@ -1064,7 +1064,7 @@ dependencies = [
 
 [[package]]
 name = "bevy_jam_6"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "avian2d",
  "bevy",
