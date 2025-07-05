@@ -61,10 +61,7 @@ pub fn plugin(app: &mut App) {
         OnExit(Screen::Level),
         (despawn_player_camera, despawn_player, despawn_inventory_ui),
     );
-    app.add_systems(
-        Update,
-        (camera_follow, inventory_changed, player_shelf_indicator),
-    );
+    app.add_systems(Update, (camera_follow, inventory_changed));
 
     // Player input reactions
     app.add_observer(player_acceleration);
@@ -106,7 +103,7 @@ fn camera_follow(
         * camera_query.1.speed_factor;
 }
 
-fn spawn_player(mut commands: Commands) {
+fn spawn_player(mut commands: Commands, assets: Res<GameAssets>) {
     // Bind inputs to actions
     let mut actions = Actions::<PlayerInputContext>::default();
     actions
@@ -143,14 +140,19 @@ fn spawn_player(mut commands: Commands) {
         .with_conditions(Press::default());
 
     // Spawn player
-    let player_size = Vec2::new(50.0, 25.0);
+    let player_size = Vec2::new(72.0, 36.0);
     commands.spawn((
         Name::new("Player"),
         Player {
             current_shelf: None,
         },
         Inventory::default(),
-        Sprite::from_color(LIMEGREEN, player_size),
+        // Sprite::from_color(LIMEGREEN, player_size),
+        Sprite {
+            image: assets.shopper_player.clone(),
+            custom_size: Some(Vec2::new(78.0, 78.0)),
+            ..Default::default()
+        },
         RigidBody::Dynamic,
         Collider::rectangle(player_size.x, player_size.y),
         CollisionLayers::new(GameLayer::Player, [GameLayer::NPC, GameLayer::Shelf]),
@@ -295,15 +297,6 @@ fn inventory_changed(
                     parent.spawn(widget);
                 });
         });
-}
-
-fn player_shelf_indicator(mut query: Single<(&mut Sprite, &Player), Changed<Player>>) {
-    query.0.color = if query.1.current_shelf.is_some() {
-        SKY_BLUE
-    } else {
-        LIMEGREEN
-    }
-    .into();
 }
 
 fn player_acceleration(

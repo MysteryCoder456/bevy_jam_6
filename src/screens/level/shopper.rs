@@ -82,7 +82,7 @@ fn spawn_shoppers(
     assets: Res<GameAssets>,
     mut events: EventReader<SpawnShopper>,
 ) {
-    let shopper_size = Vec2::new(50.0, 25.0);
+    let shopper_size = Vec2::new(72.0, 36.0);
 
     for event in events.read() {
         commands.spawn((
@@ -96,7 +96,12 @@ fn spawn_shoppers(
                 direction: Vec2::ZERO,
             },
             Inventory::default(),
-            Sprite::from_color(YELLOW, shopper_size),
+            // Sprite::from_color(YELLOW, shopper_size),
+            Sprite {
+                image: assets.shopper_npc.clone(),
+                custom_size: Some(Vec2::new(78.0, 78.0)),
+                ..Default::default()
+            },
             Transform {
                 translation: event.position.extend(0.0),
                 ..default()

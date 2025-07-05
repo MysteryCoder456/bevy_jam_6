@@ -17,6 +17,8 @@ use screens::Screen;
 struct GameAssets {
     ui_font: Handle<Font>,
     game_font: Handle<Font>,
+    shopper_npc: Handle<Image>,
+    shopper_player: Handle<Image>,
 }
 
 #[derive(Component)]
@@ -87,6 +89,16 @@ fn load_assets(
     let ui_font = asset_server.load("fonts/Pixellari.ttf");
     let game_font = asset_server.load("fonts/Pixellari.ttf");
 
-    commands.insert_resource(GameAssets { ui_font, game_font });
+    // Load images
+    // NOTE: These may be different later, for now they're the same.
+    let shopper_npc = asset_server.load("shopper/shopper.png");
+    let shopper_player = asset_server.load("shopper/shopper.png");
+
+    commands.insert_resource(GameAssets {
+        ui_font,
+        game_font,
+        shopper_npc,
+        shopper_player,
+    });
     next_screen.set(Screen::MainMenu);
 }
