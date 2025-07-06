@@ -1,3 +1,4 @@
+mod checkout;
 mod player;
 mod shelf;
 mod shopper;
@@ -8,9 +9,26 @@ use crate::{GameAssets, screens::Screen};
 use avian2d::prelude::*;
 use bevy::{color::palettes::css::*, prelude::*};
 use bevy_enhanced_input::prelude::*;
+use checkout::SpawnCheckoutCounter;
 use player::Player;
-use shelf::{ShelfOrientation, SpawnShelf};
+use shelf::SpawnShelf;
 use shopper::SpawnShopper;
+
+#[derive(Clone, Copy)]
+enum EntityOrientation {
+    Horizontal,
+    Vertical,
+}
+
+impl Into<Quat> for EntityOrientation {
+    fn into(self) -> Quat {
+        let rotation_z = match self {
+            EntityOrientation::Horizontal => 0.0,
+            EntityOrientation::Vertical => -std::f32::consts::FRAC_PI_2,
+        };
+        Quat::from_rotation_z(rotation_z)
+    }
+}
 
 #[cfg(feature = "dev")]
 #[derive(InputContext)]
@@ -32,7 +50,7 @@ enum GameLayer {
     Default,
     Player,
     NPC,
-    Shelf,
+    Environment,
 }
 
 #[derive(Clone, Copy, Hash, PartialEq, Eq, Reflect)]
@@ -77,6 +95,7 @@ pub fn plugin(app: &mut App) {
     app.register_type::<Item>();
     app.register_type::<Inventory>();
     app.register_type::<Objectives>();
+    app.register_type::<GameTimer>();
 
     // Add debug input actions
     #[cfg(feature = "dev")]
@@ -93,7 +112,12 @@ pub fn plugin(app: &mut App) {
     app.insert_resource(GameTimer(Timer::from_seconds(2.0 * 60.0, TimerMode::Once)));
 
     // Add game element plugins
-    app.add_plugins((player::plugin, shelf::plugin, shopper::plugin));
+    app.add_plugins((
+        player::plugin,
+        shelf::plugin,
+        shopper::plugin,
+        checkout::plugin,
+    ));
 
     // Gameplay systems
     app.add_systems(OnEnter(Screen::Level), (spawn_level, spawn_game_timer_ui));
@@ -118,33 +142,34 @@ pub fn plugin(app: &mut App) {
 fn spawn_level(
     mut shelf_events: EventWriter<SpawnShelf>,
     mut shopper_events: EventWriter<SpawnShopper>,
+    mut checkout_counter_events: EventWriter<SpawnCheckoutCounter>,
 ) {
     // Spawn a demo scene
 
     shelf_events.write_batch([
         SpawnShelf {
             position: Vec2::new(0.0, 600.0),
-            orientation: ShelfOrientation::Horizontal,
+            orientation: EntityOrientation::Horizontal,
             main_item: Item::InstantRamen,
         },
         SpawnShelf {
             position: Vec2::new(0.0, 350.0),
-            orientation: ShelfOrientation::Horizontal,
+            orientation: EntityOrientation::Horizontal,
             main_item: Item::ToiletPaper,
         },
         SpawnShelf {
             position: Vec2::new(0.0, 100.0),
-            orientation: ShelfOrientation::Horizontal,
+            orientation: EntityOrientation::Horizontal,
             main_item: Item::Soap,
         },
         SpawnShelf {
             position: Vec2::new(0.0, -150.0),
-            orientation: ShelfOrientation::Horizontal,
+            orientation: EntityOrientation::Horizontal,
             main_item: Item::CannedTuna,
         },
         SpawnShelf {
             position: Vec2::new(0.0, -400.0),
-            orientation: ShelfOrientation::Horizontal,
+            orientation: EntityOrientation::Horizontal,
             main_item: Item::ToiletPaper,
         },
     ]);
@@ -155,6 +180,21 @@ fn spawn_level(
         },
         SpawnShopper {
             position: Vec2::new(-300.0, -100.0),
+        },
+    ]);
+
+    checkout_counter_events.write_batch([
+        SpawnCheckoutCounter {
+            position: Vec2::new(600.0, -300.0),
+            orientation: EntityOrientation::Horizontal,
+        },
+        SpawnCheckoutCounter {
+            position: Vec2::new(600.0, 0.0),
+            orientation: EntityOrientation::Horizontal,
+        },
+        SpawnCheckoutCounter {
+            position: Vec2::new(600.0, 300.0),
+            orientation: EntityOrientation::Horizontal,
         },
     ]);
 }
@@ -259,7 +299,7 @@ fn spawn_vertical_shelf(
     let offset = Vec2::new(100.0, 0.0);
     shelf_events.write(SpawnShelf {
         position: player_query.translation.truncate() + offset,
-        orientation: ShelfOrientation::Vertical,
+        orientation: EntityOrientation::Vertical,
         main_item: Item::ToiletPaper,
     });
 }
@@ -273,7 +313,7 @@ fn spawn_horizontal_shelf(
     let offset = Vec2::new(0.0, 100.0);
     shelf_events.write(SpawnShelf {
         position: player_query.translation.truncate() + offset,
-        orientation: ShelfOrientation::Horizontal,
+        orientation: EntityOrientation::Horizontal,
         main_item: Item::ToiletPaper,
     });
 }

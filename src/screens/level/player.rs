@@ -155,7 +155,7 @@ fn spawn_player(mut commands: Commands, assets: Res<GameAssets>) {
         },
         RigidBody::Dynamic,
         Collider::rectangle(player_size.x, player_size.y),
-        CollisionLayers::new(GameLayer::Player, [GameLayer::NPC, GameLayer::Shelf]),
+        CollisionLayers::new(GameLayer::Player, [GameLayer::NPC, GameLayer::Environment]),
         LinearDamping(1.2),
         AngularDamping(2.0),
         actions,

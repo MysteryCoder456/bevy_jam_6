@@ -2,22 +2,16 @@ use crate::{
     GameAssets,
     screens::{
         Screen,
-        level::{GameLayer, Item, player::Player, shopper::Shopper},
+        level::{EntityOrientation, GameLayer, Item, player::Player, shopper::Shopper},
     },
 };
 use avian2d::prelude::*;
 use bevy::{color::palettes::css::*, prelude::*};
-use std::f32::consts::FRAC_PI_2;
-
-pub enum ShelfOrientation {
-    Horizontal,
-    Vertical,
-}
 
 #[derive(Event)]
 pub struct SpawnShelf {
     pub position: Vec2,
-    pub orientation: ShelfOrientation,
+    pub orientation: EntityOrientation,
     pub main_item: Item,
 }
 
@@ -40,7 +34,7 @@ pub fn plugin(app: &mut App) {
     // (De)spawn systems
     app.add_systems(
         Update,
-        (spawn_shelves.run_if(on_event::<SpawnShelf>),).run_if(in_state(Screen::Level)),
+        spawn_shelves.run_if(in_state(Screen::Level).and(on_event::<SpawnShelf>)),
     );
     app.add_systems(OnExit(Screen::Level), despawn_shelves);
 }
@@ -50,7 +44,7 @@ fn spawn_shelves(
     mut events: EventReader<SpawnShelf>,
     assets: Res<GameAssets>,
 ) {
-    let shelf_size = Vec2::new(300.0, 80.0);
+    let shelf_size = Vec2::new(360.0, 120.0);
     let sensor_size = Vec2::new(0.85 * shelf_size.x, 0.4 * shelf_size.y);
 
     for event in events.read() {
@@ -63,15 +57,12 @@ fn spawn_shelves(
                 Sprite::from_color(SLATE_GRAY, shelf_size),
                 Transform {
                     translation: event.position.extend(0.0),
-                    rotation: Quat::from_rotation_z(match event.orientation {
-                        ShelfOrientation::Horizontal => 0.0,
-                        ShelfOrientation::Vertical => -FRAC_PI_2,
-                    }),
+                    rotation: event.orientation.into(),
                     ..Default::default()
                 },
                 RigidBody::Static,
                 Collider::rectangle(shelf_size.x, shelf_size.y),
-                CollisionLayers::new(GameLayer::Shelf, [GameLayer::Player, GameLayer::NPC]),
+                CollisionLayers::new(GameLayer::Environment, [GameLayer::Player, GameLayer::NPC]),
                 Text2d::new(event.main_item.to_string()),
                 TextFont {
                     font: assets.game_font.clone(),
@@ -88,7 +79,10 @@ fn spawn_shelves(
                         Transform::from_xyz(0.0, (shelf_size.y + sensor_size.y) / 2.0, 0.0),
                         Sensor,
                         Collider::rectangle(sensor_size.x, sensor_size.y),
-                        CollisionLayers::new(GameLayer::Shelf, [GameLayer::Player, GameLayer::NPC]),
+                        CollisionLayers::new(
+                            GameLayer::Environment,
+                            [GameLayer::Player, GameLayer::NPC],
+                        ),
                         CollisionEventsEnabled,
                         // Sprite::from_color(LIGHT_BLUE.with_alpha(0.5), sensor_size),
                     ))
@@ -101,7 +95,10 @@ fn spawn_shelves(
                         Transform::from_xyz(0.0, -(shelf_size.y + sensor_size.y) / 2.0, 0.0),
                         Sensor,
                         Collider::rectangle(sensor_size.x, sensor_size.y),
-                        CollisionLayers::new(GameLayer::Shelf, [GameLayer::Player, GameLayer::NPC]),
+                        CollisionLayers::new(
+                            GameLayer::Environment,
+                            [GameLayer::Player, GameLayer::NPC],
+                        ),
                         CollisionEventsEnabled,
                         // Sprite::from_color(LIGHT_BLUE.with_alpha(0.5), sensor_size),
                     ))

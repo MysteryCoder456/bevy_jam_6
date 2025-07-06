@@ -114,7 +114,7 @@ fn spawn_shoppers(
                     GameLayer::Default,
                     GameLayer::Player,
                     GameLayer::NPC,
-                    GameLayer::Shelf,
+                    GameLayer::Environment,
                 ],
             ),
             CollisionEventsEnabled,
